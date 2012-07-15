@@ -7,7 +7,8 @@
         this.order = 2;
         this.maxBombs = 1;
         this.power = 1;
-        this.direction = 0;
+        this.speed = 1;
+        this.direction = window.Game.Direction.NORTH;
         this.bombs = 0;
         this.bombType = window.Game.Bombs.NORMAL;
     };
@@ -32,24 +33,29 @@
                     if(game.movable(x, y - 1)) {
                         y -= 1;
                     }
+                    this.direction = window.Game.Direction.NORTH;
                     handled = true;
                     break;
                 case window.Game.Keys.DOWN:
                     if(game.movable(x, y + 1)) {
                         y += 1;
                     }
+                    this.direction = window.Game.Direction.SOUTH;
                     handled = true;
                     break;
                 case window.Game.Keys.LEFT:
                     if(game.movable(x - 1, y)) {
                         x -= 1;
                     }
+                    this.direction = window.Game.Direction.WEST;
                     handled = true;
                     break;
                 case window.Game.Keys.RIGHT:
                     if(game.movable(x + 1, y)) {
                         x += 1;
+
                     }
+                    this.direction = window.Game.Direction.EAST;
                     handled = true;
                     break;
                 case window.Game.Keys.A:
@@ -69,6 +75,7 @@
                 if(sprite.type === window.Game.Sprites.POWERUP) {
                     switch(sprite.powerupType) {
                         case window.Game.Powerups.SPEED:
+                            this.increaseSpeed();
                             break;
                         case window.Game.Powerups.BOMB:
                             this.increaseMaxBombs();
@@ -86,6 +93,9 @@
         },
         removeBomb: function() {
             this.bombs--;
+        },
+        increaseSpeed: function() {
+            this.speed++;
         },
         increaseMaxBombs: function() {
             this.maxBombs++;

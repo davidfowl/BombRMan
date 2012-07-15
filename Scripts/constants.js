@@ -30,6 +30,13 @@ window.Game.Powerups = {
     EXPLOSION: 2
 };
 
+window.Game.Direction = {
+    NORTH: 0,
+    SOUTH: 1,
+    EAST: 2,
+    WEST: 3
+};
+
 window.Game.FPS = 1000 / 60;
 window.Game.TicksPerSecond = 30;
 

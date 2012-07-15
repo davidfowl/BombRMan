@@ -1,11 +1,15 @@
 (function($, window) {
     var TILE_SIZE = 24;
 
-    window.Game.Renderer = function() {
+    window.Game.Renderer = function(assetManager) {
+        this.assetManager = assetManager;
+        this.ticks = 0;
     };
 
     window.Game.Renderer.prototype = {
         draw : function(game, context) {
+            this.ticks++;
+
             // Draw the map 
             for(var i = 0; i < game.map.width; ++i) {
                 for(var j = 0; j < game.map.height; ++j) {
@@ -41,8 +45,10 @@
                         context.fill();
                         break;
                     case window.Game.Sprites.BOMBER:
-                        context.fillStyle = '#FFF';
-                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        var metadata = this.assetManager.getMetadata(sprite);
+                            frame = metadata.frames[sprite.direction][0];
+                            
+                        context.drawImage(metadata.image, frame.x, frame.y, metadata.width, metadata.height, sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, metadata.width, metadata.height);
                         break;
                     case window.Game.Sprites.POWERUP:
                         context.fillStyle = 'orange';

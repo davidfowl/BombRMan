@@ -15,7 +15,8 @@ $(function() {
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
     var engine = new window.Game.Engine();
-    var renderer = new window.Game.Renderer();
+    var assetManager = new window.Game.AssetManager();
+    var renderer = new window.Game.Renderer(assetManager);
 
     animate(engine, renderer, canvas, context);
 

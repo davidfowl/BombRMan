@@ -16,6 +16,13 @@ window.Game.Keys = {
     A : 65
 };
 
+window.Game.Bombs = {
+    NORMAL: 0,
+    BOUNCY : 1,
+    REMOTE : 2,
+    P : 3
+};
+
 window.Game.FPS = 1000 / 60;
 window.Game.TicksPerSecond = 30;
 

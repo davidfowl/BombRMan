@@ -57,8 +57,8 @@
             }
         },
         canDestroy : function(x, y) {
-            return this.map.get(x, y) === this.types.BRICK ||
-                   this.map.get(x, y) === this.types.GRASS;
+            var tile = this.map.get(x, y);
+            return tile === this.types.BRICK || tile === this.types.GRASS;
         },
         addSprite : function(sprite) {
             this.sprites.push(sprite);
@@ -84,7 +84,6 @@
             }
         },
         movable:  function(x, y) {
-            var canMove = false;
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {
                 if(this.map.get(x, y) === this.types.GRASS) {
                     for(var i = 0; i < this.sprites.length; ++i) {

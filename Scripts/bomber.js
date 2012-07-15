@@ -9,6 +9,7 @@
         this.power = 1;
         this.direction = 0;
         this.bombs = 0;
+        this.bombType = window.Game.Bombs.NORMAL;
     };
 
     window.Game.Bomber.prototype = {
@@ -18,7 +19,7 @@
             }
 
             this.bombs++;
-            var bomb = new window.Game.Bomb(this.x, this.y, 3, this.power, this);
+            var bomb = new window.Game.Bomb(this.x, this.y, 3, this.power, this.bombType, this);
             game.addSprite(bomb);
         },
         onInput: function(game, keyCode) {

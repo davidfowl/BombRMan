@@ -1,14 +1,15 @@
 (function($, window) {
     var dirs = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
-    window.Game.Bomb = function(x, y, duration, power, player) {
+    window.Game.Bomb = function(x, y, duration, power, bombType, player) {
         this.x = x;
         this.y = y;
+        this.ticks = window.Game.TicksPerSecond * duration;
         this.order = 0;
         this.power = power;
         this.player = player;
         this.type = window.Game.Sprites.BOMB;
-        this.ticks = window.Game.TicksPerSecond * duration;
+        this.bombType = bombType;
     };
 
     window.Game.Bomb.prototype = {
@@ -22,8 +23,7 @@
         },
         explode: function(game) {
             this.player.removeBomb();
-            game.removeSprite(this);
-
+            game.removeSprite(this); 
 
             // TODO: Add logic to base this on the bomb's power level
             game.addSprite(new window.Game.Explosion(this.x, this.y, 1));

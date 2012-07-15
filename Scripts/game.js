@@ -36,7 +36,8 @@
 
     window.Game.Engine.prototype = {
         onInput: function (e) {
-            for(var i = 0; i < this.sprites.length; ++i) {
+            var length = this.sprites.length;
+            for(var i = 0; i < length; ++i) {
                 var sprite = this.sprites[i];
                 if(sprite.onInput) {
                     sprite.onInput(this, e.keyCode);

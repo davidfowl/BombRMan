@@ -11,9 +11,9 @@
         update: function(game) {
             if(this.ticks > 0) {
                 this.ticks--;
+                game.onExplosion(this.x, this.y);
 
                 if(this.ticks === 0) {
-                    game.onExplosion(this.x, this.y);
                     game.removeSprite(this);
                 }
             }

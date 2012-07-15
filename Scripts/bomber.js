@@ -62,6 +62,9 @@
 
             return handled;
         },
+        explode: function(game) {
+            game.removeSprite(this);
+        },
         removeBomb: function() {
             this.bombs--;
         },

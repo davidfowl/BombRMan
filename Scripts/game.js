@@ -45,8 +45,8 @@
             }
         },
         onExplosion: function(x, y) {
-            if( this.map.get(x, y) === this.types.BRICK) {
-                this.map.set(x, y, this.types.GRASS); 
+            if(this.map.get(x, y) === this.types.BRICK) {
+                this.map.set(x, y, this.types.GRASS);
             }
 
             for(var i = 0; i < this.sprites.length; ++i) {

@@ -49,7 +49,7 @@
 
             if(this.map.get(x, y) === this.types.BRICK) {
                 this.map.set(x, y, this.types.GRASS);
-                
+
                 this.addSprite(new window.Game.Powerup(x, y, 5, randomPower));
             }
         },

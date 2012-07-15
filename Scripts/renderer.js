@@ -47,8 +47,8 @@
                     case window.Game.Sprites.BOMBER:
                         var metadata = this.assetManager.getMetadata(sprite);
                             frame = metadata.frames[sprite.direction][0];
-                            
-                        context.drawImage(metadata.image, frame.x, frame.y, metadata.width, metadata.height, sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, metadata.width, metadata.height);
+
+                        context.drawImage(metadata.image, frame.x, frame.y, metadata.width, metadata.height, (sprite.discreteX / 10) * TILE_SIZE, (sprite.discreteY / 10) * TILE_SIZE, metadata.width, metadata.height);
                         break;
                     case window.Game.Sprites.POWERUP:
                         context.fillStyle = 'orange';

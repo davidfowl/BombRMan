@@ -1,14 +1,17 @@
 (function($, window) {
+    var DELTA = 1;
 
     window.Game.Bomber = function() {
         this.x = 0;
         this.y = 0;
+        this.discreteX = 0;
+        this.discreteY = 0;
         this.type = window.Game.Sprites.BOMBER;
         this.order = 2;
         this.maxBombs = 1;
         this.power = 1;
         this.speed = 1;
-        this.direction = window.Game.Direction.NORTH;
+        this.direction = window.Game.Direction.SOUTH;
         this.bombs = 0;
         this.bombType = window.Game.Bombs.NORMAL;
     };
@@ -24,36 +27,35 @@
             game.addSprite(bomb);
         },
         onInput: function(game, keyCode) {
-            var x = this.x,
-                y = this.y,
+            var x = this.discreteX,
+                y = this.discreteY,
                 handled = false;
 
             switch(keyCode) {
                 case window.Game.Keys.UP:
-                    if(game.movable(x, y - 1)) {
-                        y -= 1;
+                    if(game.movable(this.x, this.y - 1)) {
+                        y -= DELTA;
                     }
                     this.direction = window.Game.Direction.NORTH;
                     handled = true;
                     break;
                 case window.Game.Keys.DOWN:
-                    if(game.movable(x, y + 1)) {
-                        y += 1;
+                    if(game.movable(this.x, this.y + 1)) {
+                        y += DELTA;
                     }
                     this.direction = window.Game.Direction.SOUTH;
                     handled = true;
                     break;
                 case window.Game.Keys.LEFT:
-                    if(game.movable(x - 1, y)) {
-                        x -= 1;
+                    if(game.movable(this.x - 1, this.y)) {
+                        x -= DELTA;
                     }
                     this.direction = window.Game.Direction.WEST;
                     handled = true;
                     break;
                 case window.Game.Keys.RIGHT:
-                    if(game.movable(x + 1, y)) {
-                        x += 1;
-
+                    if(game.movable(this.x + 1, this.y)) {
+                        x += DELTA;
                     }
                     this.direction = window.Game.Direction.EAST;
                     handled = true;
@@ -64,7 +66,7 @@
                     break;
             }
 
-            this.moveTo(x, y);
+            this.moveDiscrete(x, y);
 
             return handled;
         },
@@ -103,7 +105,24 @@
         increasePower: function() {
             this.power++;
         },
+        moveDiscrete: function(x, y) {
+            var dx = Math.floor(x % 10),
+                dy = Math.floor(y % 10);
+
+            this.discreteX = x;
+            this.discreteY = y;
+
+            if(dx === 0) {
+                this.x = Math.floor(x / 10);
+            }
+
+            if(dy === 0) {
+               this.y = Math.floor(y / 10);
+            }
+        },
         moveTo: function (x, y) {
+            this.discreteX = x * 10;
+            this.discreteY = y * 10;
             this.x = x;
             this.y = y;
         }

@@ -13,11 +13,7 @@
                 this.ticks--;
 
                 if(this.ticks === 0) {
-                    var victim = game.getSpriteAt(this.x, this.y);
-                    if(victim && victim.onExplosion) {
-                        victim.onExplosion();
-                    }
-
+                    game.onExplosion(this.x, this.y);
                     game.removeSprite(this);
                 }
             }

@@ -43,18 +43,16 @@
                 }
             }
         },
-        getSpriteAt: function(x, y) {
-            var tile = this.map.get(x, y);
-            if(tile !== this.types.GRASS) {
-                var that = this;
-                return {
-                    canMoveOn : tile === that.types.GRASS,
-                    onExplosion : function() {
-                        if(tile === that.types.BRICK) {
-                            that.map.set(x, y, that.types.GRASS); 
-                        }
-                    }
-                };
+        onExplosion: function(x, y) {
+            if( this.map.get(x, y) === this.types.BRICK) {
+                this.map.set(x, y, this.types.GRASS); 
+            }
+
+            for(var i = 0; i < this.sprites.length; ++i) {
+                var sprite = this.sprites[i];
+                if(sprite.explode && sprite.x === x && sprite.y === y) {
+                    sprite.explode(this);
+                }
             }
         },
         canDestroy : function(x, y) {
@@ -71,10 +69,10 @@
             var index = window.Game.Utils.indexOf(this.sprites, sprite);
             if(index !== -1) {
                 this.sprites.splice(index, 1);
+                this.sprites.sort(function(a, b) {
+                    return a.order - b.order;
+                });
             }
-            this.sprites.sort(function(a, b) {
-                return a.order - b.order;
-            });
         },
         update : function() {
             for(var i = 0; i < this.sprites.length; ++i) {

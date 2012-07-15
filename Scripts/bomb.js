@@ -16,11 +16,11 @@
             if(this.ticks > 0) {
                 this.ticks--;
                 if(this.ticks === 0) {
-                    this.destroy(game);
+                    this.explode(game);
                 }
             }
         },
-        destroy: function(game) {
+        explode: function(game) {
             this.player.removeBomb();
             game.removeSprite(this);
 

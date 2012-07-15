@@ -44,17 +44,32 @@
                 }
             }
         },
-        onExplosion: function(x, y) {
+        onExplosionEnd: function(x, y) {
+            var randomPower = Math.floor(Math.random() * window.Game.Powerups.EXPLOSION) + window.Game.Powerups.SPEED;
+
             if(this.map.get(x, y) === this.types.BRICK) {
                 this.map.set(x, y, this.types.GRASS);
+                
+                this.addSprite(new window.Game.Powerup(x, y, 5, randomPower));
             }
-
+        },
+        onExplosion: function(x, y) {
             for(var i = 0; i < this.sprites.length; ++i) {
                 var sprite = this.sprites[i];
                 if(sprite.explode && sprite.x === x && sprite.y === y) {
                     sprite.explode(this);
                 }
             }
+        },
+        getSpritesAt: function(x, y) {
+            var sprites = [];
+            for(var i = 0; i < this.sprites.length; ++i) {
+                var sprite = this.sprites[i];
+                if(sprite.x === x && sprite.y === y) {
+                    sprites.push(sprite);
+                }
+            }
+            return sprites;
         },
         canDestroy : function(x, y) {
             var tile = this.map.get(x, y);

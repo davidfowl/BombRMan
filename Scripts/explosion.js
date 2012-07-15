@@ -14,6 +14,7 @@
                 game.onExplosion(this.x, this.y);
 
                 if(this.ticks === 0) {
+                    game.onExplosionEnd(this.x, this.y);
                     game.removeSprite(this);
                 }
             }

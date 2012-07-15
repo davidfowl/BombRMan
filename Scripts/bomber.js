@@ -5,7 +5,7 @@
         this.y = 0;
         this.type = window.Game.Sprites.BOMBER;
         this.order = 2;
-        this.maxBombs = 2;
+        this.maxBombs = 1;
         this.power = 1;
         this.direction = 0;
         this.bombs = 0;
@@ -61,6 +61,25 @@
             this.moveTo(x, y);
 
             return handled;
+        },
+        update: function(game) {
+            var sprites = game.getSpritesAt(this.x, this.y);
+            for(var i = 0; i < sprites.length; ++i) {
+                var sprite = sprites[i];
+                if(sprite.type === window.Game.Sprites.POWERUP) {
+                    switch(sprite.powerupType) {
+                        case window.Game.Powerups.SPEED:
+                            break;
+                        case window.Game.Powerups.BOMB:
+                            this.increaseMaxBombs();
+                            break;
+                        case window.Game.Powerups.EXPLOSION:
+                            this.increasePower();
+                            break;
+                    }
+                    sprite.explode(game);
+                }
+            }
         },
         explode: function(game) {
             game.removeSprite(this);

@@ -5,7 +5,8 @@ window.Game = {};
 window.Game.Sprites = {
     BOMB : 0,
     EXPLOSION : 1,
-    BOMBER : 2
+    BOMBER : 2,
+    POWERUP : 3
 };
 
 window.Game.Keys = {
@@ -21,6 +22,12 @@ window.Game.Bombs = {
     BOUNCY : 1,
     REMOTE : 2,
     P : 3
+};
+
+window.Game.Powerups = {
+    SPEED : 0,
+    BOMB : 1,
+    EXPLOSION: 2
 };
 
 window.Game.FPS = 1000 / 60;

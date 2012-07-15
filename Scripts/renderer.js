@@ -42,7 +42,11 @@
                         break;
                     case window.Game.Sprites.BOMBER:
                         context.fillStyle = '#FFF';
-                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);        
+                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        break;
+                    case window.Game.Sprites.POWERUP:
+                        context.fillStyle = 'orange';
+                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
                         break;
                 }
             }

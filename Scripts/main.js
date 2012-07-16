@@ -14,8 +14,8 @@ var requestAnimFrame = (function() {
 $(function() {
     var canvas = document.getElementById('canvas');
     var context = canvas.getContext('2d');
-    var engine = new window.Game.Engine();
     var assetManager = new window.Game.AssetManager();
+    var engine = new window.Game.Engine(assetManager);
     var renderer = new window.Game.Renderer(assetManager);
 
     animate(engine, renderer, canvas, context);

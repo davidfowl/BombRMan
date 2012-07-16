@@ -1,6 +1,4 @@
 (function($, window) {
-    var TILE_SIZE = 24;
-
     window.Game.Renderer = function(assetManager) {
         this.assetManager = assetManager;
         this.ticks = 0;
@@ -25,7 +23,7 @@
                             break;
                     }
 
-                    context.fillRect(i * TILE_SIZE, j * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                    context.fillRect(i * game.map.tileSize, j * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                 }
             }
             
@@ -34,25 +32,39 @@
                 switch(sprite.type) {
                     case window.Game.Sprites.EXPLOSION:
                         context.fillStyle = 'yellow';
-                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                         break;
                     case window.Game.Sprites.BOMB:
                         context.fillStyle = '#000';
                         context.beginPath();
-                        context.arc(sprite.x * TILE_SIZE + (TILE_SIZE * 0.5), 
-                                    sprite.y * TILE_SIZE + (TILE_SIZE * 0.5), 
-                                    0.45 * TILE_SIZE, 0, 2 * Math.PI, false);
+                        context.arc(sprite.x * game.map.tileSize + (game.map.tileSize * 0.5), 
+                                    sprite.y * game.map.tileSize + (game.map.tileSize * 0.5), 
+                                    0.45 * game.map.tileSize, 0, 2 * Math.PI, false);
                         context.fill();
                         break;
                     case window.Game.Sprites.BOMBER:
                         var metadata = this.assetManager.getMetadata(sprite);
-                            frame = metadata.frames[sprite.direction][0];
+                            frame = metadata.frames[sprite.direction][0],
+                            x = sprite.discreteX / 100,
+                            y = sprite.discreteY / 100;
+                        
+                        // Bounding Box
+                        context.fillStyle = 'orange';
+                        context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
-                        context.drawImage(metadata.image, frame.x, frame.y, metadata.width, metadata.height, (sprite.discreteX / 10) * TILE_SIZE, (sprite.discreteY / 10) * TILE_SIZE, metadata.width, metadata.height);
+                        context.drawImage(metadata.image, 
+                                          frame.x, 
+                                          frame.y, 
+                                          metadata.width, 
+                                          metadata.height, 
+                                          x * game.map.tileSize, 
+                                          (y * game.map.tileSize) - (0.9 * game.map.tileSize), 
+                                          metadata.width * 1.5, 
+                                          metadata.height * 1.5);
                         break;
                     case window.Game.Sprites.POWERUP:
                         context.fillStyle = 'orange';
-                        context.fillRect(sprite.x * TILE_SIZE, sprite.y * TILE_SIZE, TILE_SIZE, TILE_SIZE);
+                        context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                         break;
                 }
             }

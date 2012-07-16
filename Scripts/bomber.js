@@ -1,5 +1,6 @@
 (function($, window) {
-    var DELTA = 1;
+    var DELTA = 50,
+        POWER = 100;
 
     window.Game.Bomber = function() {
         this.x = 0;
@@ -29,34 +30,28 @@
         onInput: function(game, keyCode) {
             var x = this.discreteX,
                 y = this.discreteY,
-                handled = false;
+                handled = false,
+                delta = DELTA;
+
 
             switch(keyCode) {
                 case window.Game.Keys.UP:
-                    if(game.movable(this.x, this.y - 1)) {
-                        y -= DELTA;
-                    }
+                    y -= delta;
                     this.direction = window.Game.Direction.NORTH;
                     handled = true;
                     break;
                 case window.Game.Keys.DOWN:
-                    if(game.movable(this.x, this.y + 1)) {
-                        y += DELTA;
-                    }
+                    y += delta;
                     this.direction = window.Game.Direction.SOUTH;
                     handled = true;
                     break;
                 case window.Game.Keys.LEFT:
-                    if(game.movable(this.x - 1, this.y)) {
-                        x -= DELTA;
-                    }
+                    x -= delta;
                     this.direction = window.Game.Direction.WEST;
                     handled = true;
                     break;
                 case window.Game.Keys.RIGHT:
-                    if(game.movable(this.x + 1, this.y)) {
-                        x += DELTA;
-                    }
+                    x += delta;
                     this.direction = window.Game.Direction.EAST;
                     handled = true;
                     break;
@@ -66,7 +61,7 @@
                     break;
             }
 
-            this.moveDiscrete(x, y);
+            this.moveDiscrete(game, x, y);
 
             return handled;
         },
@@ -105,24 +100,45 @@
         increasePower: function() {
             this.power++;
         },
-        moveDiscrete: function(x, y) {
-            var dx = Math.floor(x % 10),
-                dy = Math.floor(y % 10);
+        getEffectiveValue : function(value) {
+            var mod =(value % POWER);
 
-            this.discreteX = x;
-            this.discreteY = y;
-
-            if(dx === 0) {
-                this.x = Math.floor(x / 10);
+            if(mod === 0) {
+                return value;
             }
 
-            if(dy === 0) {
-               this.y = Math.floor(y / 10);
+            switch(this.direction) {
+                case window.Game.Direction.EAST:
+                case window.Game.Direction.SOUTH:
+                    return value + (POWER - mod);
+                case window.Game.Direction.NORTH:
+                case window.Game.Direction.WEST:
+                    return value - mod;
             }
         },
+        moveDiscrete: function(game, x, y) {
+            var effectiveX = this.getEffectiveValue(x) / POWER,
+                effectiveY = this.getEffectiveValue(y) / POWER;
+
+            if(game.movable(effectiveX, effectiveY)) {
+
+                this.y = Math.floor((y + DELTA) / POWER);
+                this.x = Math.floor((x + DELTA) / POWER);
+
+                this.discreteX = x;
+                this.discreteY = y;   
+            }
+
+            /* console.log('x=' + this.x + 
+                        ', y=' + this.y + 
+                        ', discreteX=' + (this.discreteX / POWER) + 
+                        ', discreteY=' + (this.discreteY / POWER) +
+                        ', effectiveX=' + effectiveX +
+                        ', effectiveY=' + effectiveY); */
+        },
         moveTo: function (x, y) {
-            this.discreteX = x * 10;
-            this.discreteY = y * 10;
+            this.discreteX = x * POWER;
+            this.discreteY = y * POWER;
             this.x = x;
             this.y = y;
         }

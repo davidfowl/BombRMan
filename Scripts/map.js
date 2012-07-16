@@ -1,9 +1,10 @@
 (function($, window) {
     var map = [];
 
-    window.Game.Map = function(width, height) {
+    window.Game.Map = function(width, height, tileSize) {
         this.width = width;
         this.height = height;
+        this.tileSize = tileSize;
 
         this.getIndex = function (x, y) {
             return (y  * this.width) + x;

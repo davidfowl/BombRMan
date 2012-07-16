@@ -1,9 +1,11 @@
 (function($, window) {
     var MAP_WIDTH = 15,
-        MAP_HEIGHT = 13;
+        MAP_HEIGHT = 13,
+        TILE_SIZE = 24;
 
-    window.Game.Engine = function() {
-        this.map = new window.Game.Map(MAP_WIDTH, MAP_HEIGHT);
+    window.Game.Engine = function(assetManager) {
+        this.assetManager = assetManager;
+        this.map = new window.Game.Map(MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
         this.sprites = [];
 
         this.types = {

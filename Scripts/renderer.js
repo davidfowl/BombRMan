@@ -52,6 +52,10 @@
                         context.fillStyle = 'orange';
                         context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
+                        // Effective Box
+                        context.fillStyle = 'red';
+                        context.fillRect(sprite.effectiveX * game.map.tileSize, sprite.effectiveY * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+
                         context.drawImage(metadata.image, 
                                           frame.x, 
                                           frame.y, 

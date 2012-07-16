@@ -7,6 +7,11 @@
         this.y = 0;
         this.discreteX = 0;
         this.discreteY = 0;
+
+        // Debugging
+        this.effectiveX = 0;
+        this.effectiveY = 0;
+
         this.type = window.Game.Sprites.BOMBER;
         this.order = 2;
         this.maxBombs = 1;
@@ -119,6 +124,9 @@
         moveDiscrete: function(game, x, y) {
             var effectiveX = this.getEffectiveValue(x) / POWER,
                 effectiveY = this.getEffectiveValue(y) / POWER;
+            
+            this.effectiveX = effectiveX;
+            this.effectiveY = effectiveY;
 
             if(game.movable(effectiveX, effectiveY)) {
 
@@ -126,7 +134,7 @@
                 this.x = Math.floor((x + DELTA) / POWER);
 
                 this.discreteX = x;
-                this.discreteY = y;   
+                this.discreteY = y;
             }
 
             /* console.log('x=' + this.x + 
@@ -139,6 +147,8 @@
         moveTo: function (x, y) {
             this.discreteX = x * POWER;
             this.discreteY = y * POWER;
+            this.effectiveX = x;
+            this.effectiveY = y;
             this.x = x;
             this.y = y;
         }

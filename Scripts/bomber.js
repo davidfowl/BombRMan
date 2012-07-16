@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 50,
+    var DELTA = 15,
         POWER = 100;
 
     window.Game.Bomber = function() {
@@ -17,6 +17,10 @@
         this.maxBombs = 1;
         this.power = 1;
         this.speed = 1;
+        
+        this.moving = false;
+        this.activeFrameIndex = 0;
+
         this.direction = window.Game.Direction.SOUTH;
         this.bombs = 0;
         this.bombType = window.Game.Bombs.NORMAL;
@@ -32,7 +36,7 @@
             var bomb = new window.Game.Bomb(this.x, this.y, 3, this.power, this.bombType, this);
             game.addSprite(bomb);
         },
-        onInput: function(game, keyCode) {
+        onKeydown: function(game, keyCode) {
             var x = this.discreteX,
                 y = this.discreteY,
                 handled = false,
@@ -66,9 +70,29 @@
                     break;
             }
 
+            if(handled) {
+                if(!this.moving) {
+                    this.moving = true;
+                    this.frameLength = game.assetManager.getMetadata(this).frames[this.direction].length;
+                    this.movingTicks = 0;
+                }
+                else {
+                    this.movingTicks++;
+                    if(this.movingTicks % 4 === 0) {
+                        this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
+                    }
+                }
+            }
+
             this.moveDiscrete(game, x, y);
 
             return handled;
+        },
+        onKeyup: function(game, keyCode) {
+            if(this.moving) {
+                this.moving = false;
+                this.activeFrameIndex = 0;
+            }
         },
         update: function(game) {
             var sprites = game.getSpritesAt(this.x, this.y);

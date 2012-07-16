@@ -21,7 +21,14 @@ $(function() {
     animate(engine, renderer, canvas, context);
 
     $(document).keydown(function(e) { 
-        if(engine.onInput(e)) {
+        if(engine.onKeydown(e)) {
+            e.preventDefault();
+            return false;
+        }
+    });
+
+    $(document).keyup(function(e) { 
+        if(engine.onKeyup(e)) {
             e.preventDefault();
             return false;
         }

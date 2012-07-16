@@ -37,12 +37,21 @@
     };
 
     window.Game.Engine.prototype = {
-        onInput: function (e) {
+        onKeydown: function (e) {
             var length = this.sprites.length;
             for(var i = 0; i < length; ++i) {
                 var sprite = this.sprites[i];
-                if(sprite.onInput) {
-                    sprite.onInput(this, e.keyCode);
+                if(sprite.onKeydown) {
+                    sprite.onKeydown(this, e.keyCode);
+                }
+            }
+        },
+        onKeyup: function (e) {
+            var length = this.sprites.length;
+            for(var i = 0; i < length; ++i) {
+                var sprite = this.sprites[i];
+                if(sprite.onKeyup) {
+                    sprite.onKeyup(this, e.keyCode);
                 }
             }
         },

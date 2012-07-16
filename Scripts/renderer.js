@@ -44,7 +44,7 @@
                         break;
                     case window.Game.Sprites.BOMBER:
                         var metadata = this.assetManager.getMetadata(sprite);
-                            frame = metadata.frames[sprite.direction][0],
+                            frame = metadata.frames[sprite.direction][sprite.activeFrameIndex],
                             x = sprite.discreteX / 100,
                             y = sprite.discreteY / 100;
                         

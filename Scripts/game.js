@@ -1,12 +1,46 @@
 (function($, window) {
     var MAP_WIDTH = 15,
         MAP_HEIGHT = 13,
-        TILE_SIZE = 24;
+        TILE_SIZE = 24,
+        keyState = {},
+        prevKeyState = {};
 
     window.Game.Engine = function(assetManager) {
         this.assetManager = assetManager;
         this.map = new window.Game.Map(MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
         this.sprites = [];
+        this.inputManager = {
+            isKeyDown: function(key) {
+                return keyState[key] === true;
+            },
+            isKeyUp: function(key) {
+                return keyState[key] === false;
+            },
+            isHoldingKey: function(key) {
+                return prevKeyState[key] === true &&
+                       keyState[key] === true;
+            },
+            isKeyPress: function(key) {
+                return prevKeyState[key] === false &&
+                       keyState[key] === true;
+            },
+            isKeyRelease: function(key) {
+                return prevKeyState[key] === true &&
+                       keyState[key] === false;
+            }
+        };
+
+        keyState[window.Game.Keys.UP] = false;
+        keyState[window.Game.Keys.DOWN] = false;
+        keyState[window.Game.Keys.LEFT] = false;
+        keyState[window.Game.Keys.RIGHT] = false;
+        keyState[window.Game.Keys.A] = false;
+
+        prevKeyState[window.Game.Keys.UP] = false;
+        prevKeyState[window.Game.Keys.DOWN] = false;
+        prevKeyState[window.Game.Keys.LEFT] = false;
+        prevKeyState[window.Game.Keys.RIGHT] = false;
+        prevKeyState[window.Game.Keys.A] = false;
 
         this.types = {
             GRASS: 0,
@@ -38,22 +72,10 @@
 
     window.Game.Engine.prototype = {
         onKeydown: function (e) {
-            var length = this.sprites.length;
-            for(var i = 0; i < length; ++i) {
-                var sprite = this.sprites[i];
-                if(sprite.onKeydown) {
-                    sprite.onKeydown(this, e.keyCode);
-                }
-            }
+            keyState[e.keyCode] = true;
         },
         onKeyup: function (e) {
-            var length = this.sprites.length;
-            for(var i = 0; i < length; ++i) {
-                var sprite = this.sprites[i];
-                if(sprite.onKeyup) {
-                    sprite.onKeyup(this, e.keyCode);
-                }
-            }
+            keyState[e.keyCode] = false;
         },
         onExplosionEnd: function(x, y) {
             var randomPower = Math.floor(Math.random() * window.Game.Powerups.EXPLOSION) + window.Game.Powerups.SPEED;
@@ -107,6 +129,10 @@
                 if(sprite.update) {
                     sprite.update(this);
                 }
+            }
+
+            for(var key in keyState) {
+                prevKeyState[key] = keyState[key];
             }
         },
         movable:  function(x, y) {

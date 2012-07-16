@@ -1,6 +1,7 @@
 (function($, window) {
-    var DELTA = 15,
-        POWER = 100;
+    var DELTA = 10,
+        POWER = 100,
+        FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 
     window.Game.Bomber = function() {
         this.x = 0;
@@ -17,6 +18,8 @@
         this.maxBombs = 1;
         this.power = 1;
         this.speed = 1;
+        this.directionX = 0;
+        this.directionY = 0;
         
         this.moving = false;
         this.activeFrameIndex = 0;
@@ -36,41 +39,41 @@
             var bomb = new window.Game.Bomb(this.x, this.y, 3, this.power, this.bombType, this);
             game.addSprite(bomb);
         },
-        onKeydown: function(game, keyCode) {
-            var x = this.discreteX,
-                y = this.discreteY,
-                handled = false,
-                delta = DELTA;
+        handleInput: function(game) {
+            var moving = false;
 
-
-            switch(keyCode) {
-                case window.Game.Keys.UP:
-                    y -= delta;
-                    this.direction = window.Game.Direction.NORTH;
-                    handled = true;
-                    break;
-                case window.Game.Keys.DOWN:
-                    y += delta;
-                    this.direction = window.Game.Direction.SOUTH;
-                    handled = true;
-                    break;
-                case window.Game.Keys.LEFT:
-                    x -= delta;
-                    this.direction = window.Game.Direction.WEST;
-                    handled = true;
-                    break;
-                case window.Game.Keys.RIGHT:
-                    x += delta;
-                    this.direction = window.Game.Direction.EAST;
-                    handled = true;
-                    break;
-                case window.Game.Keys.A:
-                    this.createBomb(game);
-                    handled = true;
-                    break;
+            if(game.inputManager.isKeyDown(window.Game.Keys.UP)) {
+                this.direction = window.Game.Direction.NORTH;
+                this.directionY = -1;
+                this.directionX = 0;
+                moving = true;
+            }
+            else if(game.inputManager.isKeyDown(window.Game.Keys.DOWN)) {
+                this.direction = window.Game.Direction.SOUTH;
+                this.directionY = 1;
+                this.directionX = 0;
+                moving = true;
+            }
+            else if(game.inputManager.isKeyDown(window.Game.Keys.LEFT)) {
+                this.direction = window.Game.Direction.WEST;
+                this.directionY = 0;
+                this.directionX = -1;
+                moving = true;
+            }
+            else if(game.inputManager.isKeyDown(window.Game.Keys.RIGHT)) {
+                this.direction = window.Game.Direction.EAST;
+                this.directionY = 0;
+                this.directionX = 1;
+                moving = true;
+            }
+            else {
+                this.directionY = 0;
+                this.directionX = 0;
+                this.moving = false;
+                this.activeFrameIndex = 0;
             }
 
-            if(handled) {
+            if(moving) {
                 if(!this.moving) {
                     this.moving = true;
                     this.frameLength = game.assetManager.getMetadata(this).frames[this.direction].length;
@@ -78,23 +81,27 @@
                 }
                 else {
                     this.movingTicks++;
-                    if(this.movingTicks % 4 === 0) {
+                    if(this.movingTicks % FRAME_RATE === 0) {
                         this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
                     }
                 }
             }
 
-            this.moveDiscrete(game, x, y);
-
-            return handled;
-        },
-        onKeyup: function(game, keyCode) {
-            if(this.moving) {
-                this.moving = false;
-                this.activeFrameIndex = 0;
+            if(game.inputManager.isKeyPress(window.Game.Keys.A)) {
+                this.createBomb(game);
             }
         },
         update: function(game) {
+            var x = this.discreteX,
+                y = this.discreteY;
+
+            this.handleInput(game);
+
+            x += DELTA * this.directionX;
+            y += DELTA * this.directionY;
+
+            this.moveDiscrete(game, x, y);
+
             var sprites = game.getSpritesAt(this.x, this.y);
             for(var i = 0; i < sprites.length; ++i) {
                 var sprite = sprites[i];
@@ -161,12 +168,12 @@
                 this.discreteY = y;
             }
 
-            /* console.log('x=' + this.x + 
+            /*console.log('x=' + this.x + 
                         ', y=' + this.y + 
                         ', discreteX=' + (this.discreteX / POWER) + 
                         ', discreteY=' + (this.discreteY / POWER) +
                         ', effectiveX=' + effectiveX +
-                        ', effectiveY=' + effectiveY); */
+                        ', effectiveY=' + effectiveY);*/
         },
         moveTo: function (x, y) {
             this.discreteX = x * POWER;

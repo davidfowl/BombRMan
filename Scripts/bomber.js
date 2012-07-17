@@ -6,8 +6,8 @@
     window.Game.Bomber = function() {
         this.x = 0;
         this.y = 0;
-        this.discreteX = 0;
-        this.discreteY = 0;
+        this.exactX = 0;
+        this.exactY = 0;
 
         // Debugging
         this.effectiveX = 0;
@@ -87,20 +87,21 @@
                 }
             }
 
-            if(game.inputManager.isKeyPress(window.Game.Keys.A)) {
+            if(game.inputManager.isKeyPress(window.Game.Keys.A) || 
+               game.inputManager.isKeyDown(window.Game.Keys.A)) {
                 this.createBomb(game);
             }
         },
         update: function(game) {
-            var x = this.discreteX,
-                y = this.discreteY;
+            var x = this.exactX,
+                y = this.exactY;
 
             this.handleInput(game);
 
             x += DELTA * this.directionX;
             y += DELTA * this.directionY;
 
-            this.moveDiscrete(game, x, y);
+            this.moveExact(game, x, y);
 
             var sprites = game.getSpritesAt(this.x, this.y);
             for(var i = 0; i < sprites.length; ++i) {
@@ -136,48 +137,76 @@
         increasePower: function() {
             this.power++;
         },
-        getEffectiveValue : function(value) {
-            var mod =(value % POWER);
-
-            if(mod === 0) {
-                return value;
-            }
-
+        getHitTargets: function() {
             switch(this.direction) {
-                case window.Game.Direction.EAST:
-                case window.Game.Direction.SOUTH:
-                    return value + (POWER - mod);
                 case window.Game.Direction.NORTH:
+                    return [{ x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }];
+                case window.Game.Direction.SOUTH:
+                    return [{ x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 }];
+                case window.Game.Direction.EAST:
+                    return [{ x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
                 case window.Game.Direction.WEST:
-                    return value - mod;
+                    return [{ x: -1, y: -1 }, { x: -1, y: 0 }, { x: -1, y: 1 }];
             }
         },
-        moveDiscrete: function(game, x, y) {
-            var effectiveX = this.getEffectiveValue(x) / POWER,
-                effectiveY = this.getEffectiveValue(y) / POWER;
-            
-            this.effectiveX = effectiveX;
-            this.effectiveY = effectiveY;
+        moveExact: function(game, x, y) {
+            var actualX = Math.floor((x + (POWER / 2)) / POWER),
+                actualY = Math.floor((y + (POWER / 2)) / POWER),
+                targets = this.getHitTargets(),
+                sourceLeft = this.effectiveX * game.map.tileSize,
+                sourceTop = this.effectiveY * game.map.tileSize,
+                sourceRect = {
+                    left: sourceLeft,
+                    top: sourceTop,
+                    right: sourceLeft + game.map.tileSize,
+                    bottom : sourceTop + game.map.tileSize
+                };
 
-            if(game.movable(effectiveX, effectiveY)) {
+            this.effectiveX = x / POWER;
+            this.effectiveY = y / POWER;
 
-                this.y = Math.floor((y + DELTA) / POWER);
-                this.x = Math.floor((x + DELTA) / POWER);
+            $('#debug').html('source=' + JSON.stringify(sourceRect));
+            $('#debug').append(sourceRect);
+            $('#debug').append('<br/>');
 
-                this.discreteX = x;
-                this.discreteY = y;
+            for(var i = 0; i < targets.length; ++i) {
+                var tx = targets[i].x,
+                    ty = targets[i].y,
+                    left = (actualX + tx) * game.map.tileSize,
+                    top = (actualY + ty) * game.map.tileSize,
+                    targetRect = {
+                        left: left,
+                        top: top,
+                        right: left + game.map.tileSize,
+                        bottom: top + game.map.tileSize
+                    },
+                    movable = game.movable(Math.floor(left / game.map.tileSize), 
+                                           Math.floor(top / game.map.tileSize)),
+                    intersects = window.Game.Utils.intersects(sourceRect, targetRect);
+
+                if(!movable && intersects) {
+                    this.exactX = this.x * POWER;
+                    this.exactY = this.y * POWER;
+
+                    $('#debug').append('target=' + JSON.stringify(targetRect));
+                    $('#debug').append('<br/>');
+                    $('#debug').append('movable=' + movable);
+                    $('#debug').append('<br/>');
+                    $('#debug').append('intersects=' + intersects);
+                    $('#debug').append('<br/>');
+                    return;
+                }
             }
 
-            /*console.log('x=' + this.x + 
-                        ', y=' + this.y + 
-                        ', discreteX=' + (this.discreteX / POWER) + 
-                        ', discreteY=' + (this.discreteY / POWER) +
-                        ', effectiveX=' + effectiveX +
-                        ', effectiveY=' + effectiveY);*/
+            this.x = actualX;
+            this.y = actualY
+
+            this.exactX = x;
+            this.exactY = y;
         },
         moveTo: function (x, y) {
-            this.discreteX = x * POWER;
-            this.discreteY = y * POWER;
+            this.exactX = x * POWER;
+            this.exactY = y * POWER;
             this.effectiveX = x;
             this.effectiveY = y;
             this.x = x;

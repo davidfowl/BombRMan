@@ -1,7 +1,7 @@
 (function($, window) {
     var MAP_WIDTH = 15,
         MAP_HEIGHT = 13,
-        TILE_SIZE = 24,
+        TILE_SIZE = 32,
         keyState = {},
         prevKeyState = {};
 

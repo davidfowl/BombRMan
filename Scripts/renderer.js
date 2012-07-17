@@ -1,4 +1,7 @@
 (function($, window) {
+    var SCALE_FACTOR = 1.5,
+        BASE_TILE_SIZE = 24;
+
     window.Game.Renderer = function(assetManager) {
         this.assetManager = assetManager;
         this.ticks = 0;
@@ -45,16 +48,19 @@
                     case window.Game.Sprites.BOMBER:
                         var metadata = this.assetManager.getMetadata(sprite);
                             frame = metadata.frames[sprite.direction][sprite.activeFrameIndex],
-                            x = sprite.discreteX / 100,
-                            y = sprite.discreteY / 100;
+                            x = sprite.exactX / 100,
+                            y = sprite.exactY / 100,
+                            scale = (game.map.tileSize / BASE_TILE_SIZE) * SCALE_FACTOR,
+                            width = metadata.width * scale,
+                            height = metadata.height * scale;
+
                         
                         // Bounding Box
                         context.fillStyle = 'orange';
                         context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
-                        // Effective Box
-                        context.fillStyle = 'red';
-                        context.fillRect(sprite.effectiveX * game.map.tileSize, sprite.effectiveY * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                        context.fillStyle = 'purple';
+                        context.fillRect(x * game.map.tileSize, y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
                         context.drawImage(metadata.image, 
                                           frame.x, 
@@ -63,8 +69,8 @@
                                           metadata.height, 
                                           x * game.map.tileSize, 
                                           (y * game.map.tileSize) - (0.9 * game.map.tileSize), 
-                                          metadata.width * 1.5, 
-                                          metadata.height * 1.5);
+                                          width, 
+                                          height);
                         break;
                     case window.Game.Sprites.POWERUP:
                         context.fillStyle = 'orange';

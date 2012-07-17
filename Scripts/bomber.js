@@ -42,37 +42,46 @@
         handleInput: function(game) {
             var moving = false;
 
+            if(game.inputManager.isKeyUp(window.Game.Keys.UP)) {
+                this.directionY = 0;
+            }
+
+            if(game.inputManager.isKeyUp(window.Game.Keys.DOWN)) {
+                this.directionY = 0;
+            }
+
+            if(game.inputManager.isKeyUp(window.Game.Keys.LEFT)) {
+                this.directionX = 0;
+            }
+
+            if(game.inputManager.isKeyUp(window.Game.Keys.RIGHT)) {
+                this.directionX = 0;
+            }
+
             if(game.inputManager.isKeyDown(window.Game.Keys.UP)) {
                 this.direction = window.Game.Direction.NORTH;
                 this.directionY = -1;
-                this.directionX = 0;
                 moving = true;
             }
-            else if(game.inputManager.isKeyDown(window.Game.Keys.DOWN)) {
+            
+            if(game.inputManager.isKeyDown(window.Game.Keys.DOWN)) {
                 this.direction = window.Game.Direction.SOUTH;
                 this.directionY = 1;
-                this.directionX = 0;
                 moving = true;
             }
-            else if(game.inputManager.isKeyDown(window.Game.Keys.LEFT)) {
+            
+            if(game.inputManager.isKeyDown(window.Game.Keys.LEFT)) {
                 this.direction = window.Game.Direction.WEST;
-                this.directionY = 0;
                 this.directionX = -1;
                 moving = true;
-            }
-            else if(game.inputManager.isKeyDown(window.Game.Keys.RIGHT)) {
+            }            
+            
+            if(game.inputManager.isKeyDown(window.Game.Keys.RIGHT)) {
                 this.direction = window.Game.Direction.EAST;
-                this.directionY = 0;
                 this.directionX = 1;
                 moving = true;
             }
-            else {
-                this.directionY = 0;
-                this.directionX = 0;
-                this.moving = false;
-                this.activeFrameIndex = 0;
-            }
-
+            
             if(moving) {
                 if(!this.moving) {
                     this.moving = true;
@@ -85,6 +94,12 @@
                         this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
                     }
                 }
+            }
+            else {
+                this.directionY = 0;
+                this.directionX = 0;
+                this.moving = false;
+                this.activeFrameIndex = 0;
             }
 
             if(game.inputManager.isKeyPress(window.Game.Keys.A) || 
@@ -170,6 +185,10 @@
             $('#debug').append('<br/>');
             $('#debug').append('exactX=' + (this.exactX / POWER) + ', exactY=' + (this.exactY / POWER));
             $('#debug').append('<br/>');
+            $('#debug').append('actualX=' + actualX + ', actualY=' + actualY);
+            $('#debug').append('<br/>');
+            $('#debug').append('directionX=' + this.directionX + ', directionY=' + this.directionY);
+            $('#debug').append('<br/>');
 
             for(var i = 0; i < targets.length; ++i) { 
                 var tx = targets[i].x,
@@ -190,16 +209,7 @@
                     var diffX = (this.x * POWER) - this.exactX,
                         diffY = (this.y * POWER) - this.exactY;
 
-                    this.exactX = this.x * POWER;
-                    this.exactY = this.y * POWER;
-
                     $('#debug').append('collision=(' + (actualX + tx) + ', ' + (actualY + ty) +')');
-                    $('#debug').append('<br/>');
-                    $('#debug').append('movable=' + movable);
-                    $('#debug').append('<br/>');
-                    $('#debug').append('intersects=' + intersects);
-                    $('#debug').append('<br/>');
-                    $('#debug').append('diffX=' + diffX + ', diffY=' + diffY);
                     $('#debug').append('<br/>');
                     return;
                 }

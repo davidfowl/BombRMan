@@ -150,6 +150,9 @@
             }
         },
         moveExact: function(game, x, y) {
+            this.effectiveX = x / POWER;
+            this.effectiveY = y / POWER;
+
             var actualX = Math.floor((x + (POWER / 2)) / POWER),
                 actualY = Math.floor((y + (POWER / 2)) / POWER),
                 targets = this.getHitTargets(),
@@ -162,14 +165,13 @@
                     bottom : sourceTop + game.map.tileSize
                 };
 
-            this.effectiveX = x / POWER;
-            this.effectiveY = y / POWER;
-
             $('#debug').html('source=' + JSON.stringify(sourceRect));
             $('#debug').append(sourceRect);
             $('#debug').append('<br/>');
+            $('#debug').append('exactX=' + (this.exactX / POWER) + ', exactY=' + (this.exactY / POWER));
+            $('#debug').append('<br/>');
 
-            for(var i = 0; i < targets.length; ++i) {
+            for(var i = 0; i < targets.length; ++i) { 
                 var tx = targets[i].x,
                     ty = targets[i].y,
                     left = (actualX + tx) * game.map.tileSize,
@@ -185,21 +187,26 @@
                     intersects = window.Game.Utils.intersects(sourceRect, targetRect);
 
                 if(!movable && intersects) {
+                    var diffX = (this.x * POWER) - this.exactX,
+                        diffY = (this.y * POWER) - this.exactY;
+
                     this.exactX = this.x * POWER;
                     this.exactY = this.y * POWER;
 
-                    $('#debug').append('target=' + JSON.stringify(targetRect));
+                    $('#debug').append('collision=(' + (actualX + tx) + ', ' + (actualY + ty) +')');
                     $('#debug').append('<br/>');
                     $('#debug').append('movable=' + movable);
                     $('#debug').append('<br/>');
                     $('#debug').append('intersects=' + intersects);
+                    $('#debug').append('<br/>');
+                    $('#debug').append('diffX=' + diffX + ', diffY=' + diffY);
                     $('#debug').append('<br/>');
                     return;
                 }
             }
 
             this.x = actualX;
-            this.y = actualY
+            this.y = actualY;
 
             this.exactX = x;
             this.exactY = y;

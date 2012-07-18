@@ -86,6 +86,7 @@
                 if(!this.moving) {
                     this.moving = true;
                     this.frameLength = game.assetManager.getMetadata(this).frames[this.direction].length;
+                    this.activeFrameIndex = 1;
                     this.movingTicks = 0;
                 }
                 else {

@@ -14,7 +14,8 @@ window.Game.Keys = {
     DOWN : 40,
     LEFT : 37,
     RIGHT : 39,
-    A : 65
+    A : 65,
+    D: 68
 };
 
 window.Game.Bombs = {

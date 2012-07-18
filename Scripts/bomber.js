@@ -153,33 +153,36 @@
         increasePower: function() {
             this.power++;
         },
-        getHitTargets: function() {
-            var targets = [];
-
+        getXHitTargets: function() {
             if(this.directionX === 1) {
-                var a = [{ x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
-                for(var i = 0; i < a.length; ++i) {
-                    targets.push(a[i]);
-                }
+                return [{ x: 1, y: -1 }, { x: 1, y: 0 }, { x: 1, y: 1 }];
             }
             else if(this.directionX === -1) {
-                var a = [{ x: -1, y: -1 }, { x: -1, y: 0 }, { x: -1, y: 1 }];
-                for(var i = 0; i < a.length; ++i) {
-                    targets.push(a[i]);
-                }
+                return [{ x: -1, y: -1 }, { x: -1, y: 0 }, { x: -1, y: 1 }];
             }
-
+            return [];
+        },
+        getYHitTargets: function() {
             if(this.directionY === -1) {
-                var a = [{ x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }];
-                for(var i = 0; i < a.length; ++i) {
-                    targets.push(a[i]);
-                }
+                return [{ x: -1, y: -1 }, { x: 0, y: -1 }, { x: 1, y: -1 }];
             }
             else if(this.directionY === 1) {
-                var a = [{ x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 }];
-                for(var i = 0; i < a.length; ++i) {
-                    targets.push(a[i]);
-                }
+                return [{ x: -1, y: 1 }, { x: 0, y: 1 }, { x: 1, y: 1 }];
+            }
+
+            return [];
+        },
+        getHitTargets: function() {
+            var targets = [],
+                xs = this.getXHitTargets();
+                ys = this.getYHitTargets();
+
+            for(var i = 0; i < xs.length; ++i) {
+                targets.push(xs[i]);
+            }
+
+            for(var i = 0; i < ys.length; ++i) {
+                targets.push(ys[i]);
             }
 
             return targets;

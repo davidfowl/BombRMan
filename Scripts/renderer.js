@@ -65,9 +65,9 @@
 
                             var targets = sprite.getHitTargets();
                             context.fillStyle = 'red';
-                            for(var i = 0; i < targets.length; ++i) {
-                                var xx = sprite.x + targets[i].x,
-                                    yy = sprite.y + targets[i].y;
+                            for(var j = 0; j < targets.length; ++j) {
+                                var xx = sprite.x + targets[j].x,
+                                    yy = sprite.y + targets[j].y;
                                 context.fillRect(xx * game.map.tileSize, yy * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                             }
                         }

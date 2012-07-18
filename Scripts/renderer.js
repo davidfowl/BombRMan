@@ -55,12 +55,14 @@
                             height = metadata.height * scale;
 
                         
-                        // Bounding Box
-                        context.fillStyle = 'orange';
-                        context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                        // Bounding Box 
+                        if(window.Game.Debugging) {
+                            context.fillStyle = 'orange';
+                            context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
-                        context.fillStyle = 'purple';
-                        context.fillRect(x * game.map.tileSize, y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                            context.fillStyle = 'purple';
+                            context.fillRect(x * game.map.tileSize, y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                        }
 
                         context.drawImage(metadata.image, 
                                           frame.x, 

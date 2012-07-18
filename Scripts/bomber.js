@@ -180,16 +180,13 @@
                     bottom : sourceTop + game.map.tileSize
                 };
 
-            $('#debug').html('source=' + JSON.stringify(sourceRect));
-            $('#debug').append(sourceRect);
-            $('#debug').append('<br/>');
-            $('#debug').append('exactX=' + (this.exactX / POWER) + ', exactY=' + (this.exactY / POWER));
-            $('#debug').append('<br/>');
-            $('#debug').append('actualX=' + actualX + ', actualY=' + actualY);
-            $('#debug').append('<br/>');
-            $('#debug').append('directionX=' + this.directionX + ', directionY=' + this.directionY);
-            $('#debug').append('<br/>');
+            window.Game.Logger.clear();
+            window.Game.Logger.log('source=' + JSON.stringify(sourceRect));
+            window.Game.Logger.log('exactX=' + (this.exactX / POWER) + ', exactY=' + (this.exactY / POWER));
+            window.Game.Logger.log('actualX=' + actualX + ', actualY=' + actualY);
+            window.Game.Logger.log('directionX=' + this.directionX + ', directionY=' + this.directionY);
 
+            var collisions = [];
             for(var i = 0; i < targets.length; ++i) { 
                 var tx = targets[i].x,
                     ty = targets[i].y,
@@ -206,20 +203,37 @@
                     intersects = window.Game.Utils.intersects(sourceRect, targetRect);
 
                 if(!movable && intersects) {
-                    var diffX = (this.x * POWER) - this.exactX,
-                        diffY = (this.y * POWER) - this.exactY;
+                    collisions.push({ x: actualX + tx, y: actualY + ty });
 
-                    $('#debug').append('collision=(' + (actualX + tx) + ', ' + (actualY + ty) +')');
-                    $('#debug').append('<br/>');
-                    return;
+                    window.Game.Logger.log('collision=(' + (actualX + tx) + ', ' + (actualY + ty) +')');
                 }
             }
 
-            this.x = actualX;
-            this.y = actualY;
+            switch(collisions.length) {
+                case 0:
+                this.x = actualX;
+                this.y = actualY;
 
-            this.exactX = x;
-            this.exactY = y;
+                this.exactX = x;
+                this.exactY = y;
+                break;
+                case 1:
+                    var diffY = (collisions[0].y * POWER - this.exactY),
+                        diffX = (collisions[0].x * POWER - this.exactX),
+                        absX = Math.abs(diffX),
+                        absY = Math.abs(diffY);
+
+                    if(absY >= 40 && absY < 100) {
+                        this.exactY += DELTA * -window.Game.Utils.sign(diffY);
+                    }
+
+                    if(absX >= 40  && absX < 100) {
+                        this.exactX += DELTA * -window.Game.Utils.sign(diffX);
+                    }
+
+                    window.Game.Logger.log('diffX=(' + absX +', diffY=' + absY + ')');
+                break;
+            }
         },
         moveTo: function (x, y) {
             this.exactX = x * POWER;

@@ -246,11 +246,11 @@
                         absX = Math.abs(diffX),
                         absY = Math.abs(diffY);
 
-                    if(absY >= 40 && absY < 100) {
+                    if(absY >= 35 && absY < 100) {
                         this.exactY += DELTA * -window.Game.Utils.sign(diffY);
                     }
 
-                    if(absX >= 40  && absX < 100) {
+                    if(absX >= 35  && absX < 100) {
                         this.exactX += DELTA * -window.Game.Utils.sign(diffX);
                     }
 

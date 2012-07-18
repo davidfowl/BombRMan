@@ -62,6 +62,14 @@
 
                             context.fillStyle = 'purple';
                             context.fillRect(x * game.map.tileSize, y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+
+                            var targets = sprite.getHitTargets();
+                            context.fillStyle = 'red';
+                            for(var i = 0; i < targets.length; ++i) {
+                                var xx = sprite.x + targets[i].x,
+                                    yy = sprite.y + targets[i].y;
+                                context.fillRect(xx * game.map.tileSize, yy * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                            }
                         }
 
                         context.drawImage(metadata.image, 

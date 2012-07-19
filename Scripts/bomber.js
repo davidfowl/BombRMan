@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 10,
+    var DELTA = 7,
         POWER = 100,
         FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 
@@ -260,16 +260,14 @@
                         candidates.push({ directionX: this.directionX, 
                                           directionY: 0, 
                                           x: possible[i].x,
-                                          y: possible[i].y,
-                                          rect: possible[i].rect });
+                                          y: possible[i].y });
                     }
                     
                     if(possible[i].x === p2.x && possible[i].y === p2.y) {
                         candidates.push({ directionX: 0, 
                                           directionY: this.directionY,
                                           x: possible[i].x,
-                                          y: possible[i].y,
-                                          rect: possible[i].rect });
+                                          y: possible[i].y });
                     }
                 }
 
@@ -296,6 +294,20 @@
                     window.Game.Logger.log('candidate dir=(' + candidate.directionX + ', ' + candidate.directionY +')');
 
                     if(window.Game.MoveSprites) {
+                        if(candidates.directionX === -1) {
+                            this.direction = window.Game.Direction.WEST;
+                        }
+                        else if(candidate.directionX === 1) {
+                            this.direction = window.Game.Direction.EAST;
+                        }
+
+                        if(candidate.directionY === -1) {
+                            this.direction = window.Game.Direction.NORTH;
+                        }
+                        else if(candidate.directionY === 1) {
+                            this.direction = window.Game.Direction.SOUTH;
+                        }
+
                         this.exactX += DELTA * candidate.directionX;
                         this.x = actualX;
 

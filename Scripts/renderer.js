@@ -70,6 +70,11 @@
                                     yy = sprite.y + targets[j].y;
                                 context.fillRect(xx * game.map.tileSize, yy * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                             }
+
+                            if(sprite.candidate) {
+                                context.fillStyle = 'yellow';
+                                context.fillRect(sprite.candidate.x * game.map.tileSize, sprite.candidate.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
+                            }
                         }
 
                         context.drawImage(metadata.image, 

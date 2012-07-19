@@ -15,7 +15,8 @@ window.Game.Keys = {
     LEFT : 37,
     RIGHT : 39,
     A : 65,
-    D: 68
+    D: 68,
+    P: 80
 };
 
 window.Game.Bombs = {
@@ -41,6 +42,7 @@ window.Game.Direction = {
 window.Game.FPS = 1000 / 60;
 window.Game.TicksPerSecond = 30;
 window.Game.Debugging = true;
+window.Game.MoveSprites = true;
 
 
 })(jQuery, window);

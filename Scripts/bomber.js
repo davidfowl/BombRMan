@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 10,
+    var DELTA = 1,
         POWER = 100,
         FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 
@@ -203,8 +203,7 @@
                     bottom : sourceTop + game.map.tileSize
                 },
                 collisions = [],
-                possible = [],
-                handled = false;
+                possible = [];
 
             window.Game.Logger.clear();
             window.Game.Logger.log('source=' + JSON.stringify(sourceRect));
@@ -232,64 +231,82 @@
                 if(!movable && intersects) {
                     collisions.push({ x: targetX, y: targetY });
 
-                    window.Game.Logger.log('collision=(' + (actualX + tx) + ', ' + (actualY + ty) +')');
+                    window.Game.Logger.log('collision=(' + targetX + ', ' + targetY +')');
                 }
                 else {
                     possible.push({ x: targetX, y: targetY });
                 }
             }
 
-            switch(collisions.length) {
-                case 0:
-                this.x = actualX;
-                this.y = actualY;
+            if(collisions.length == 0) {
+                if(window.Game.MoveSprites) {
+                    this.x = actualX;
+                    this.y = actualY;
 
-                this.exactX = x;
-                this.exactY = y;
-                break;
-                case 1:
-                    var diffY = (collisions[0].y * POWER - this.exactY),
-                        diffX = (collisions[0].x * POWER - this.exactX),
-                        absX = Math.abs(diffX),
-                        absY = Math.abs(diffY);
+                    this.exactX = x;
+                    this.exactY = y;
+                }
 
-                    if(absY >= 35 && absY < 100) {
-                        this.exactY += DELTA * -window.Game.Utils.sign(diffY);
-                        handled = true;
-                    }
-
-                    if(absX >= 35  && absX < 100) {
-                        this.exactX += DELTA * -window.Game.Utils.sign(diffX);
-                        handled = true;
-                    }
-
-                    window.Game.Logger.log('diffX=(' + absX +', diffY=' + absY + ')');
-                break;
-            }
-
-            if(!handled && collisions.length > 0) {
-                var candidate,
+                this.candidate = null;
+            } 
+            else {
+                var candidates = [],
+                    candidate,
                     p1 = { x: actualX + this.directionX, y: actualY },
                     p2 = { x: actualX, y: actualY + this.directionY };
 
                 for(var i = 0; i < possible.length; ++i) { 
                     if(possible[i].x === p1.x && possible[i].y === p1.y) {
-                        // window.Game.Logger.log('p['+ i + ']=(' + possible[i].x +', ' + possible[i].y + ')');
-                        candidate = { x: this.directionX, y: 0 };
+                        candidates.push({ directionX: this.directionX, 
+                                          directionY: 0, 
+                                          x: possible[i].x,
+                                          y: possible[i].y,
+                                          rect: possible[i].rect });
                     }
                     
                     if(possible[i].x === p2.x && possible[i].y === p2.y) {
-                        candidate = { x: 0, y: this.directionY };
+                        candidates.push({ directionX: 0, 
+                                          directionY: this.directionY,
+                                          x: possible[i].x,
+                                          y: possible[i].y,
+                                          rect: possible[i].rect });
                     }
+                }
 
-                    if(candidate) {
-                        this.exactX += DELTA * candidate.x;
-                        this.exactY += DELTA * candidate.y;
+                if(candidates.length == 1) {
+                    candidate = candidates[0];
+                }
+                else if(candidates.length == 2) {
+                    var minDistance;
+                    for(var i = 0; i < candidates.length; ++i) { 
+                        var targetCandidate = candidates[i],
+                            xs = (this.exactX - candidates[i].x * POWER),
+                            ys = (this.exactY - candidates[i].y * POWER)
+                            distance = xs * xs + ys * ys;
 
+                        if(!minDistance || distance < minDistance) {
+                            minDistance = distance;
+                            candidate = targetCandidate;
+                        }
+                    }
+                }
+
+                if(candidate) {
+                    window.Game.Logger.log('candidate=(' + candidate.x + ', ' + candidate.y +')');
+                    window.Game.Logger.log('candidate dir=(' + candidate.directionX + ', ' + candidate.directionY +')');
+
+                    if(window.Game.MoveSprites) {
+                        this.exactX += DELTA * candidate.directionX;
                         this.x = actualX;
+
+                        this.exactY += DELTA * candidate.directionY;
                         this.y = actualY;
-                        break;
                     }
+
+                    this.candidate = candidate;
+                }
+                else {
+                    this.candidate = null;
                 }
             }
         },

@@ -29,18 +29,11 @@
                        keyState[key] === false;
             }
         };
-
-        keyState[window.Game.Keys.UP] = false;
-        keyState[window.Game.Keys.DOWN] = false;
-        keyState[window.Game.Keys.LEFT] = false;
-        keyState[window.Game.Keys.RIGHT] = false;
-        keyState[window.Game.Keys.A] = false;
-
-        prevKeyState[window.Game.Keys.UP] = false;
-        prevKeyState[window.Game.Keys.DOWN] = false;
-        prevKeyState[window.Game.Keys.LEFT] = false;
-        prevKeyState[window.Game.Keys.RIGHT] = false;
-        prevKeyState[window.Game.Keys.A] = false;
+        
+        for(var key in window.Game.Keys) {
+            keyState[key] = false;
+            prevKeyState[key] = false;
+        }
 
         this.types = {
             GRASS: 0,

@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 7,
+    var DELTA = 5,
         POWER = 100,
         FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 
@@ -293,6 +293,34 @@
                     window.Game.Logger.log('candidate=(' + candidate.x + ', ' + candidate.y +')');
                     window.Game.Logger.log('candidate dir=(' + candidate.directionX + ', ' + candidate.directionY +')');
 
+                    var diffX = candidate.x * POWER - this.exactX,
+                        diffY = candidate.y * POWER - this.exactY,
+                        absX  = Math.abs(diffX),
+                        absY  = Math.abs(diffY),
+                        effectiveDirectionX = 0,
+                        effectiveDirectionY = 0;
+
+                    if(absX === 100) {
+                        effectiveDirectionX = 0;
+                    }
+                    else {
+                        effectiveDirectionX = window.Game.Utils.sign(diffX);
+                    }
+
+                    if(absY === 100) {
+                        effectiveDirectionY = 0;
+                    }
+                    else {
+                        effectiveDirectionY = window.Game.Utils.sign(diffY);
+                    }
+
+                    if(effectiveDirectionX === 0 && effectiveDirectionY === 0) {
+                        effectiveDirectionX = candidate.directionX;
+                        effectiveDirectionY = candidate.directionY;
+                    }
+
+                    window.Game.Logger.log('diffDir=(' + effectiveDirectionX + ', ' + effectiveDirectionY + ')');
+
                     if(window.Game.MoveSprites) {
                         if(candidates.directionX === -1) {
                             this.direction = window.Game.Direction.WEST;
@@ -308,10 +336,10 @@
                             this.direction = window.Game.Direction.SOUTH;
                         }
 
-                        this.exactX += DELTA * candidate.directionX;
+                        this.exactX += DELTA * effectiveDirectionX;
                         this.x = actualX;
 
-                        this.exactY += DELTA * candidate.directionY;
+                        this.exactY += DELTA * effectiveDirectionY;
                         this.y = actualY;
                     }
 

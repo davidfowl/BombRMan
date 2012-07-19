@@ -346,6 +346,43 @@
                     this.candidate = candidate;
                 }
                 else {
+                    var diffY = (collisions[0].y * POWER - this.exactY),
+                        diffX = (collisions[0].x * POWER - this.exactX),
+                        absX = Math.abs(diffX), 
+                        absY = Math.abs(diffY),
+                        effectiveDirectionX = 0,
+                        effectiveDirectionY = 0;
+
+                    if(absX >= 35 && absX < 100) {
+                        effectiveDirectionX = -window.Game.Utils.sign(diffX);
+                    }
+
+                    if(absY >= 35 && absY < 100) {
+                        effectiveDirectionY = -window.Game.Utils.sign(diffY);
+                    }
+
+                    if(window.Game.MoveSprites) {
+                        if(effectiveDirectionX === -1) {
+                            this.direction = window.Game.Direction.WEST;
+                        }
+                        else if(effectiveDirectionX === 1) {
+                            this.direction = window.Game.Direction.EAST;
+                        }
+
+                        if(effectiveDirectionY === -1) {
+                            this.direction = window.Game.Direction.NORTH;
+                        }
+                        else if(effectiveDirectionY === 1) {
+                            this.direction = window.Game.Direction.SOUTH;
+                        }
+
+                        this.exactX += DELTA * effectiveDirectionX;    
+                        this.exactY += DELTA * effectiveDirectionY;
+                    }
+
+                    window.Game.Logger.log('diffX=(' + absX +', diffY=' + absY + ')');
+                    window.Game.Logger.log('effectiveDirection=(' + effectiveDirectionX +', ' + effectiveDirectionY + ')');
+
                     this.candidate = null;
                 }
             }

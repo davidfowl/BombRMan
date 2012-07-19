@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 5,
+    var DELTA = 10,
         POWER = 100,
         FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 
@@ -322,17 +322,17 @@
                     window.Game.Logger.log('diffDir=(' + effectiveDirectionX + ', ' + effectiveDirectionY + ')');
 
                     if(window.Game.MoveSprites) {
-                        if(candidates.directionX === -1) {
+                        if(effectiveDirectionX === -1) {
                             this.direction = window.Game.Direction.WEST;
                         }
-                        else if(candidate.directionX === 1) {
+                        else if(effectiveDirectionX === 1) {
                             this.direction = window.Game.Direction.EAST;
                         }
 
-                        if(candidate.directionY === -1) {
+                        if(effectiveDirectionY === -1) {
                             this.direction = window.Game.Direction.NORTH;
                         }
-                        else if(candidate.directionY === 1) {
+                        else if(effectiveDirectionY === 1) {
                             this.direction = window.Game.Direction.SOUTH;
                         }
 

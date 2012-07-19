@@ -1,5 +1,5 @@
 (function($, window) {
-    var DELTA = 1,
+    var DELTA = 10,
         POWER = 100,
         FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
 

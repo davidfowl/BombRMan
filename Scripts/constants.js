@@ -41,7 +41,7 @@ window.Game.Direction = {
 
 window.Game.FPS = 1000 / 60;
 window.Game.TicksPerSecond = 30;
-window.Game.Debugging = true;
+window.Game.Debugging = false;
 window.Game.MoveSprites = true;
 
 

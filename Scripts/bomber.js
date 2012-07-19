@@ -322,19 +322,7 @@
                     window.Game.Logger.log('diffDir=(' + effectiveDirectionX + ', ' + effectiveDirectionY + ')');
 
                     if(window.Game.MoveSprites) {
-                        if(effectiveDirectionX === -1) {
-                            this.direction = window.Game.Direction.WEST;
-                        }
-                        else if(effectiveDirectionX === 1) {
-                            this.direction = window.Game.Direction.EAST;
-                        }
-
-                        if(effectiveDirectionY === -1) {
-                            this.direction = window.Game.Direction.NORTH;
-                        }
-                        else if(effectiveDirectionY === 1) {
-                            this.direction = window.Game.Direction.SOUTH;
-                        }
+                        this.setDirection(effectiveDirectionX, effectiveDirectionY);
 
                         this.exactX += DELTA * effectiveDirectionX;
                         this.x = actualX;
@@ -362,19 +350,7 @@
                     }
 
                     if(window.Game.MoveSprites) {
-                        if(effectiveDirectionX === -1) {
-                            this.direction = window.Game.Direction.WEST;
-                        }
-                        else if(effectiveDirectionX === 1) {
-                            this.direction = window.Game.Direction.EAST;
-                        }
-
-                        if(effectiveDirectionY === -1) {
-                            this.direction = window.Game.Direction.NORTH;
-                        }
-                        else if(effectiveDirectionY === 1) {
-                            this.direction = window.Game.Direction.SOUTH;
-                        }
+                        this.setDirection(effectiveDirectionX, effectiveDirectionY);
 
                         this.exactX += DELTA * effectiveDirectionX;    
                         this.exactY += DELTA * effectiveDirectionY;
@@ -385,6 +361,21 @@
 
                     this.candidate = null;
                 }
+            }
+        },
+        setDirection: function(x, y) {
+            if(x === -1) {
+                this.direction = window.Game.Direction.WEST;
+            }
+            else if(x === 1) {
+                this.direction = window.Game.Direction.EAST;
+            }
+
+            if(y === -1) {
+                this.direction = window.Game.Direction.NORTH;
+            }
+            else if(y === 1) {
+                this.direction = window.Game.Direction.SOUTH;
             }
         },
         moveTo: function (x, y) {

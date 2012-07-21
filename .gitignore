@@ -1,0 +1,14 @@
+[Oo]bj/
+[Bb]in/
+*.user
+target/
+*.suo
+*.cache
+*.bak
+packages/
+msbuild.log
+_Resharper*/
+_AzurePackage/
+*.ncrunchsolution
+JabbR*.css
+JabbR*.js

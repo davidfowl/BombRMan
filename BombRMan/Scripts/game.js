@@ -7,6 +7,7 @@
 
     window.Game.Engine = function(assetManager) {
         this.assetManager = assetManager;
+        this.player = null;
         this.map = new window.Game.Map(MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
         this.sprites = [];
         this.inputManager = {
@@ -40,27 +41,6 @@
             WALL: 2,
             BRICK: 3,
         };
-
-    var s = "222222222222222" +
-            "200003030300002" +
-            "202323232323202" +
-            "203333333333302" +
-            "202323232323202" +
-            "233333333333332" +
-            "232323232323232" +
-            "233333333333332" +
-            "202323232323202" +
-            "203333333333302" +
-            "202323232323202" +
-            "200003030300002" +
-            "222222222222222";
-
-        this.map.fill(s);
-        
-        // Initialize the bomber
-        var bomber = new window.Game.Bomber();
-        bomber.moveTo(1, 1);
-        this.addSprite(bomber);
     };
 
     window.Game.Engine.prototype = {
@@ -115,6 +95,37 @@
                     return a.order - b.order;
                 });
             }
+        },
+        initialize: function() {
+            var that = this,
+                gameServer = $.connection.gameServer;
+
+            gameServer.initializeMap = function(data) {
+                that.map.fill(data);
+            };
+
+            gameServer.initializePlayer = function(player) {
+                that.player = player;
+
+                var bomber = new window.Game.Bomber();
+                bomber.moveTo(player.X, player.Y);
+                that.addSprite(bomber);
+            };
+
+            gameServer.initialize = function(players) {
+                for(var i = 0; i < players.length; ++i) {
+                    if(that.player && players[i].Index === that.player.Index) {
+                        continue;
+                    }
+
+                    var bomber = new window.Game.RemoteBomber();
+                    bomber.moveTo(players[i].X, players[i].Y);
+                    that.addSprite(bomber);
+                }
+            };
+
+            $.connection.hub.logging = true;
+            $.connection.hub.start();
         },
         update : function() {
             if(this.inputManager.isKeyPress(window.Game.Keys.D)) {

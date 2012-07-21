@@ -1,52 +1,54 @@
-(function($, window) {
+(function ($, window) {
 
-var requestAnimFrame = (function() {
-  return window.requestAnimationFrame ||
+    var requestAnimFrame = (function () {
+        return window.requestAnimationFrame ||
      window.webkitRequestAnimationFrame ||
      window.mozRequestAnimationFrame ||
      window.oRequestAnimationFrame ||
      window.msRequestAnimationFrame ||
-     function(callback, element) {
-       window.setTimeout(callback, window.Game.FPS);
+     function (callback, element) {
+         window.setTimeout(callback, window.Game.FPS);
      };
-})();
+    })();
 
-$(function() {
-    var canvas = document.getElementById('canvas');
-    var context = canvas.getContext('2d');
-    var assetManager = new window.Game.AssetManager();
-    var engine = new window.Game.Engine(assetManager);
-    var renderer = new window.Game.Renderer(assetManager);
+    $(function () {
+        var canvas = document.getElementById('canvas');
+        var context = canvas.getContext('2d');
+        var assetManager = new window.Game.AssetManager();
+        var engine = new window.Game.Engine(assetManager);
+        var renderer = new window.Game.Renderer(assetManager);
 
-    animate(engine, renderer, canvas, context);
+        engine.initialize();
 
-    $(document).keydown(function(e) {
-        if(engine.onKeydown(e)) {
-            e.preventDefault();
-            return false;
-        }
+        animate(engine, renderer, canvas, context);
+
+        $(document).keydown(function (e) {
+            if (engine.onKeydown(e)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        $(document).keyup(function (e) {
+            if (engine.onKeyup(e)) {
+                e.preventDefault();
+                return false;
+            }
+        });
     });
 
-    $(document).keyup(function(e) { 
-        if(engine.onKeyup(e)) {
-            e.preventDefault();
-            return false;
-        }
-    });
-});
+    function animate(engine, renderer, canvas, context) {
 
-function animate(engine, renderer, canvas, context) { 
+        engine.update();
 
-    engine.update();
+        context.clearRect(0, 0, canvas.width, canvas.height);
 
-    context.clearRect(0, 0, canvas.width, canvas.height);
+        renderer.draw(engine, context);
 
-    renderer.draw(engine, context);
-
-    // request new frame
-    requestAnimFrame(function() {
-      animate(engine, renderer, canvas, context);
-    });
-}
+        // request new frame
+        requestAnimFrame(function () {
+            animate(engine, renderer, canvas, context);
+        });
+    }
 
 })(jQuery, window);

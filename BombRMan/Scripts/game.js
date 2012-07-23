@@ -97,6 +97,12 @@
                 });
             }
         },
+        sendKeyState: function() {
+            if($.connection.hub.state === $.signalR.connectionState.connected) {
+                var gameServer = $.connection.gameServer;
+                gameServer.sendKeys(keyState);
+            }
+        },
         initialize: function() {
             var that = this,
                 gameServer = $.connection.gameServer;
@@ -144,9 +150,6 @@
             $.connection.hub.start();
         },
         update : function() {
-            var that = this,
-                gameServer = $.connection.gameServer;
-
             this.ticks++;
             if(this.inputManager.isKeyPress(window.Game.Keys.D)) {
                 window.Game.Debugging = !window.Game.Debugging;
@@ -167,11 +170,7 @@
                 prevKeyState[key] = keyState[key];
             }
 
-            if($.connection.hub.state === $.signalR.connectionState.connected) {
-                if(this.ticks % 30 === 0) {
-                    gameServer.sendKeys(keyState);
-                }
-            }
+            this.sendKeyState();
         },
         movable:  function(x, y) {
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

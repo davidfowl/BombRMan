@@ -47,7 +47,7 @@ namespace BombRMan.Hubs
             {
                 _activePlayers.TryAdd(Context.ConnectionId, new PlayerState
                 {
-                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(120),
+                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(10),
                     Player = player
                 });
 
@@ -179,7 +179,7 @@ namespace BombRMan.Hubs
 
         private static void StartGameLoop()
         {
-            var interval = TimeSpan.FromMilliseconds(1000.0 / 60);
+            var interval = TimeSpan.FromMilliseconds(15);
             while (true)
             {
                 foreach (var pair in _activePlayers)

@@ -7,7 +7,8 @@
 
     window.Game.Engine = function(assetManager) {
         this.assetManager = assetManager;
-        this.player = null;
+        this.players = {};
+        this.ticks = 0;
         this.map = new window.Game.Map(MAP_WIDTH, MAP_HEIGHT, TILE_SIZE);
         this.sprites = [];
         this.inputManager = {
@@ -32,8 +33,8 @@
         };
         
         for(var key in window.Game.Keys) {
-            keyState[key] = false;
-            prevKeyState[key] = false;
+            keyState[window.Game.Keys[key]] = false;
+            prevKeyState[window.Game.Keys[key]] = false;
         }
 
         this.types = {
@@ -105,22 +106,37 @@
             };
 
             gameServer.initializePlayer = function(player) {
-                that.player = player;
-
                 var bomber = new window.Game.Bomber();
+                that.playerIndex = player.Index;
+                that.players[player.Index] = bomber;
                 bomber.moveTo(player.X, player.Y);
                 that.addSprite(bomber);
+                
+                
+                // Create a ghost
+                var ghost = new window.Game.RemoteBomber();
+                that.ghost = ghost;
+                ghost.moveTo(player.X, player.Y);
+                that.addSprite(ghost);
             };
 
             gameServer.initialize = function(players) {
                 for(var i = 0; i < players.length; ++i) {
-                    if(that.player && players[i].Index === that.player.Index) {
+                    var player = players[i];
+                    if(that.players[player.Index]) {
                         continue;
                     }
 
                     var bomber = new window.Game.RemoteBomber();
+                    that.players[player.Index] = bomber;
                     bomber.moveTo(players[i].X, players[i].Y);
                     that.addSprite(bomber);
+                }
+            };
+
+            gameServer.updatePlayerState = function(player) {
+                if(that.ghost) {
+                    that.ghost.moveExact(that, player.X * 100, player.Y * 100);
                 }
             };
 
@@ -128,6 +144,10 @@
             $.connection.hub.start();
         },
         update : function() {
+            var that = this,
+                gameServer = $.connection.gameServer;
+
+            this.ticks++;
             if(this.inputManager.isKeyPress(window.Game.Keys.D)) {
                 window.Game.Debugging = !window.Game.Debugging;
             }
@@ -145,6 +165,12 @@
 
             for(var key in keyState) {
                 prevKeyState[key] = keyState[key];
+            }
+
+            if($.connection.hub.state === $.signalR.connectionState.connected) {
+                if(this.ticks % 30 === 0) {
+                    gameServer.sendKeys(keyState);
+                }
             }
         },
         movable:  function(x, y) {

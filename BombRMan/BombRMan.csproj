@@ -74,7 +74,6 @@
     <Content Include="Scripts\bomb.js" />
     <Content Include="Scripts\bomber.js" />
     <Content Include="Scripts\constants.js" />
-    <Content Include="Scripts\remotebomber.js" />
     <Content Include="Scripts\explosion.js" />
     <Content Include="Scripts\game.js" />
     <Content Include="Scripts\jquery-1.7.2-vsdoc.js" />

@@ -141,9 +141,24 @@
             };
 
             gameServer.updatePlayerState = function(player) {
-                if(that.ghost) {
-                    that.ghost.moveExact(that, player.ExactX, player.ExactY);
-                    that.ghost.direction = player.Direction;
+                var sprite = null;
+                if(player.Index === that.playerIndex) {
+                    sprite = that.ghost;
+                }
+                else {
+                    sprite = that.players[player.Index];
+                }
+
+                if(sprite) {
+                    // Brute force
+                    sprite.x = player.X;
+                    sprite.y = player.Y;
+                    sprite.exactX = player.ExactX;
+                    sprite.exactY = player.ExactY;
+                    sprite.direction = player.Direction;
+                    sprite.directionX = player.DirectionX;
+                    sprite.directionY = player.DirectionY;
+                    sprite.updateAnimation(that);
                 }
             };
 

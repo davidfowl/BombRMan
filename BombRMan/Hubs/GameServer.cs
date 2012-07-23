@@ -51,7 +51,7 @@ namespace BombRMan.Hubs
             {
                 _activePlayers.TryAdd(Context.ConnectionId, new PlayerState
                 {
-                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(100),
+                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(30),
                     Player = player
                 });
 
@@ -83,7 +83,8 @@ namespace BombRMan.Hubs
                     X = _initialPositions[i].X,
                     Y = _initialPositions[i].Y,
                     ExactX = _initialPositions[i].X * POWER,
-                    ExactY = _initialPositions[i].Y * POWER
+                    ExactY = _initialPositions[i].Y * POWER,
+                    Direction = Direction.SOUTH
                 });
             }
             return stack;
@@ -114,13 +115,12 @@ namespace BombRMan.Hubs
 
         public class Player
         {
-            private int _directionX;
-            private int _directionY;
-
             public int X { get; set; }
             public int Y { get; set; }
             public int ExactX { get; set; }
             public int ExactY { get; set; }
+            public int DirectionX { get; set; }
+            public int DirectionY { get; set; }
 
             public Direction Direction { get; set; }
 
@@ -133,46 +133,46 @@ namespace BombRMan.Hubs
 
                 if (!input[Keys.UP])
                 {
-                    _directionY = 0;
+                    DirectionY = 0;
                 }
 
                 if (!input[Keys.DOWN])
                 {
-                    _directionY = 0;
+                    DirectionY = 0;
                 }
 
                 if (!input[Keys.LEFT])
                 {
-                    _directionX = 0;
+                    DirectionX = 0;
                 }
 
                 if (!input[Keys.RIGHT])
                 {
-                    _directionX = 0;
+                    DirectionX = 0;
                 }
 
                 if (input[Keys.DOWN])
                 {
-                    _directionY = 1;
+                    DirectionY = 1;
                 }
 
                 if (input[Keys.UP])
                 {
-                    _directionY = -1;
+                    DirectionY = -1;
                 }
 
                 if (input[Keys.LEFT])
                 {
-                    _directionX = -1;
+                    DirectionX = -1;
                 }
 
                 if (input[Keys.RIGHT])
                 {
-                    _directionX = 1;
+                    DirectionX = 1;
                 }
 
-                x += _directionX * DELTA;
-                y += _directionY * DELTA;
+                x += DirectionX * DELTA;
+                y += DirectionY * DELTA;
 
                 MoveExact(x, y);
             }
@@ -228,7 +228,7 @@ namespace BombRMan.Hubs
 
                 if (collisions.Count == 0)
                 {
-                    SetDirection(_directionX, _directionY);
+                    SetDirection(DirectionX, DirectionY);
 
                     X = actualX;
                     Y = actualY;
@@ -240,18 +240,18 @@ namespace BombRMan.Hubs
                 {
                     var candidates = new List<Tuple<int, int, Point>>();
                     Tuple<int, int, Point> candidate = null;
-                    var p1 = new Point(actualX + _directionX, actualY);
-                    var p2 = new Point(actualX, actualY + _directionY);
+                    var p1 = new Point(actualX + DirectionX, actualY);
+                    var p2 = new Point(actualX, actualY + DirectionY);
                     foreach (var nextMove in possible)
                     {
                         if (p1.Equals(nextMove))
                         {
-                            candidates.Add(Tuple.Create(_directionX, 0, p1));
+                            candidates.Add(Tuple.Create(DirectionX, 0, p1));
                         }
 
                         if (p2.Equals(nextMove))
                         {
-                            candidates.Add(Tuple.Create(0, _directionY, p2));
+                            candidates.Add(Tuple.Create(0, DirectionY, p2));
                         }
                     }
 
@@ -373,11 +373,11 @@ namespace BombRMan.Hubs
 
             private Point[] GetXHitTargets()
             {
-                if (_directionX == 1)
+                if (DirectionX == 1)
                 {
                     return new Point[] { new Point(1, -1), new Point(1, 0), new Point(1, 1) };
                 }
-                else if (_directionX == -1)
+                else if (DirectionX == -1)
                 {
                     return new Point[] { new Point(-1, -1), new Point(-1, 0), new Point(-1, 1) };
                 }
@@ -387,11 +387,11 @@ namespace BombRMan.Hubs
 
             private Point[] GetYHitTargets()
             {
-                if (_directionY == -1)
+                if (DirectionY == -1)
                 {
                     return new Point[] { new Point(-1, -1), new Point(0, -1), new Point(1, -1) };
                 }
-                else if (_directionY == 1)
+                else if (DirectionY == 1)
                 {
                     return new Point[] { new Point(-1, 1), new Point(0, 1), new Point(1, 1) };
                 }
@@ -473,6 +473,7 @@ namespace BombRMan.Hubs
                     Y = pos.Y,
                     ExactX = pos.X * POWER,
                     ExactY = pos.Y * POWER,
+                    Direction = Direction.SOUTH
                 });
             }
 

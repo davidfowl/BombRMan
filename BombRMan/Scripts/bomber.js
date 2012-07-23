@@ -41,8 +41,6 @@
             game.addSprite(bomb);
         },
         handleInput: function (game) {
-            var moving = false;
-
             if (game.inputManager.isKeyUp(window.Game.Keys.UP)) {
                 this.directionY = 0;
             }
@@ -62,26 +60,34 @@
             if (game.inputManager.isKeyDown(window.Game.Keys.UP)) {
                 this.direction = window.Game.Direction.NORTH;
                 this.directionY = -1;
-                moving = true;
             }
 
             if (game.inputManager.isKeyDown(window.Game.Keys.DOWN)) {
                 this.direction = window.Game.Direction.SOUTH;
                 this.directionY = 1;
-                moving = true;
             }
 
             if (game.inputManager.isKeyDown(window.Game.Keys.LEFT)) {
                 this.direction = window.Game.Direction.WEST;
                 this.directionX = -1;
-                moving = true;
             }
 
             if (game.inputManager.isKeyDown(window.Game.Keys.RIGHT)) {
                 this.direction = window.Game.Direction.EAST;
                 this.directionX = 1;
-                moving = true;
             }
+
+            this.updateAnimation(game);
+
+            if (game.inputManager.isKeyPress(window.Game.Keys.A) ||
+               game.inputManager.isKeyDown(window.Game.Keys.A)) {
+                this.createBomb(game);
+            }
+        },
+        updateAnimation: function (game) {
+            var moving = this.directionX !== 0 || this.directionY !== 0;
+
+            window.Game.Logger.log('Moving = ' + moving);
 
             if (moving) {
                 if (!this.moving) {
@@ -90,23 +96,12 @@
                     this.activeFrameIndex = 1;
                     this.movingTicks = 0;
                 }
-                else {
-                    this.movingTicks++;
-                    if (this.movingTicks % FRAME_RATE === 0) {
-                        this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
-                    }
-                }
             }
             else {
                 this.directionY = 0;
                 this.directionX = 0;
                 this.moving = false;
                 this.activeFrameIndex = 0;
-            }
-
-            if (game.inputManager.isKeyPress(window.Game.Keys.A) ||
-               game.inputManager.isKeyDown(window.Game.Keys.A)) {
-                this.createBomb(game);
             }
         },
         update: function (game) {
@@ -120,6 +115,14 @@
                 y += DELTA * this.directionY;
 
                 this.moveExact(game, x, y);
+            }
+
+            if (this.moving) {
+                this.movingTicks++;
+
+                if (this.movingTicks % FRAME_RATE === 0) {
+                    this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
+                }
             }
 
             var sprites = game.getSpritesAt(this.x, this.y);

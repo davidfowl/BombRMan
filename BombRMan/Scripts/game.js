@@ -114,7 +114,7 @@
                 
                 
                 // Create a ghost
-                var ghost = new window.Game.RemoteBomber();
+                var ghost = new window.Game.Bomber(false);
                 that.ghost = ghost;
                 ghost.moveTo(player.X, player.Y);
                 that.addSprite(ghost);
@@ -127,7 +127,7 @@
                         continue;
                     }
 
-                    var bomber = new window.Game.RemoteBomber();
+                    var bomber = new window.Game.Bomber(false);
                     that.players[player.Index] = bomber;
                     bomber.moveTo(players[i].X, players[i].Y);
                     that.addSprite(bomber);

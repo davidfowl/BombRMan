@@ -38,6 +38,7 @@
     });
 
     function animate(engine, renderer, canvas, context) {
+        window.Game.Logger.clear();
 
         engine.update();
 

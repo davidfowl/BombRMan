@@ -51,7 +51,7 @@ namespace BombRMan.Hubs
             {
                 _activePlayers.TryAdd(Context.ConnectionId, new PlayerState
                 {
-                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(10),
+                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(100),
                     Player = player
                 });
 

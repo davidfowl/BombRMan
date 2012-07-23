@@ -142,11 +142,12 @@
 
             gameServer.updatePlayerState = function(player) {
                 if(that.ghost) {
-                    that.ghost.moveExact(that, player.X * 100, player.Y * 100);
+                    that.ghost.moveExact(that, player.ExactX, player.ExactY);
                 }
             };
 
             $.connection.hub.logging = true;
+            // $.connection.hub.url = 'http://localhost:8081/signalr';
             $.connection.hub.start();
         },
         update : function() {

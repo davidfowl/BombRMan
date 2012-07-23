@@ -143,6 +143,7 @@
             gameServer.updatePlayerState = function(player) {
                 if(that.ghost) {
                     that.ghost.moveExact(that, player.ExactX, player.ExactY);
+                    that.ghost.direction = player.Direction;
                 }
             };
 

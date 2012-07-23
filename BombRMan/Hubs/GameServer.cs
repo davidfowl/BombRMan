@@ -34,6 +34,7 @@ namespace BombRMan.Hubs
         private static int _gameLoopRunning;
         private static Map _map = new Map(mapData, 15, 13, 32);
         private const int POWER = 100;
+        private const int DELTA = 10;
 
         public Task Connect()
         {
@@ -121,7 +122,7 @@ namespace BombRMan.Hubs
             public int ExactX { get; set; }
             public int ExactY { get; set; }
 
-            public int Direction { get; set; }
+            public Direction Direction { get; set; }
 
             public int Index { get; set; }
 
@@ -170,8 +171,8 @@ namespace BombRMan.Hubs
                     _directionX = 1;
                 }
 
-                x += _directionX * 10;
-                y += _directionY * 10;
+                x += _directionX * DELTA;
+                y += _directionY * DELTA;
 
                 MoveExact(x, y);
             }
@@ -227,6 +228,8 @@ namespace BombRMan.Hubs
 
                 if (collisions.Count == 0)
                 {
+                    SetDirection(_directionX, _directionY);
+
                     X = actualX;
                     Y = actualY;
 
@@ -235,18 +238,132 @@ namespace BombRMan.Hubs
                 }
                 else
                 {
+                    var candidates = new List<Tuple<int, int, Point>>();
+                    Tuple<int, int, Point> candidate = null;
+                    var p1 = new Point(actualX + _directionX, actualY);
+                    var p2 = new Point(actualX, actualY + _directionY);
+                    foreach (var nextMove in possible)
+                    {
+                        if (p1.Equals(nextMove))
+                        {
+                            candidates.Add(Tuple.Create(_directionX, 0, p1));
+                        }
 
+                        if (p2.Equals(nextMove))
+                        {
+                            candidates.Add(Tuple.Create(0, _directionY, p2));
+                        }
+                    }
+
+                    if (candidates.Count == 1)
+                    {
+                        candidate = candidates[0];
+                    }
+                    else if (candidates.Count == 2)
+                    {
+                        int minDistance = Int32.MaxValue;
+                        for (int i = 0; i < candidates.Count; ++i)
+                        {
+                            var targetCandidate = candidates[i];
+                            int xs = (ExactX - candidates[i].Item3.X * POWER);
+                            int ys = (ExactY - candidates[i].Item3.Y * POWER);
+                            int distance = xs * xs + ys * ys;
+
+                            if (distance < minDistance)
+                            {
+                                minDistance = distance;
+                                candidate = targetCandidate;
+                            }
+                        }
+                    }
+
+                    if (candidate != null)
+                    {
+                        var diffX = candidate.Item3.X * POWER - ExactX;
+                        var diffY = candidate.Item3.Y * POWER - ExactY;
+                        var absX = Math.Abs(diffX);
+                        var absY = Math.Abs(diffY);
+                        int effectiveDirectionX = 0;
+                        int effectiveDirectionY = 0;
+
+                        if (absX == 0)
+                        {
+                            effectiveDirectionX = 0;
+                        }
+                        else
+                        {
+                            effectiveDirectionX = Math.Sign(diffX);
+                        }
+
+                        if (absY == 100)
+                        {
+                            effectiveDirectionY = 0;
+                        }
+                        else
+                        {
+                            effectiveDirectionY = Math.Sign(diffY);
+                        }
+
+                        if (effectiveDirectionX == 0 && effectiveDirectionY == 0)
+                        {
+                            effectiveDirectionX = candidate.Item1;
+                            effectiveDirectionY = candidate.Item2;
+                        }
+
+                        SetDirection(effectiveDirectionX, effectiveDirectionY);
+
+                        ExactX += DELTA * effectiveDirectionX;
+                        X = actualX;
+
+                        ExactY += DELTA * effectiveDirectionY;
+                        Y = actualY;
+                    }
+                    else
+                    {
+                        var diffY = (collisions[0].Y * POWER - ExactY);
+                        var diffX = (collisions[0].X * POWER - ExactX);
+                        var absX = Math.Abs(diffX);
+                        var absY = Math.Abs(diffY);
+                        int effectiveDirectionX = 0;
+                        int effectiveDirectionY = 0;
+
+                        if (absX >= 35 && absX < 100)
+                        {
+                            effectiveDirectionX = -Math.Sign(diffX);
+                        }
+
+                        if (absY >= 35 && absY < 100)
+                        {
+                            effectiveDirectionY = -Math.Sign(diffY);
+                        }
+
+                        SetDirection(effectiveDirectionX, effectiveDirectionY);
+
+                        ExactX += DELTA * effectiveDirectionX;
+                        ExactY += DELTA * effectiveDirectionY;
+                    }
+                }
+            }
+
+            private void SetDirection(int x, int y)
+            {
+                if (x == -1)
+                {
+                    Direction = GameServer.Direction.WEST;
+                }
+                else if (x == 1)
+                {
+                    Direction = GameServer.Direction.EAST;
                 }
 
-                //var sourceLeft = this.effectiveX * game.map.tileSize,
-                //var sourceTop = this.effectiveY * game.map.tileSize,
-                //var sourceRect = new RectangleF()
-                //{
-                //    left = sourceLeft,
-                //    top = sourceTop,
-                //    right = sourceLeft + game.map.tileSize,
-                //    bottom = sourceTop + game.map.tileSize
-                //};
+                if (y == -1)
+                {
+                    Direction = GameServer.Direction.NORTH;
+                }
+                else if (y == 1)
+                {
+                    Direction = GameServer.Direction.SOUTH;
+                }
             }
 
             private Point[] GetHitTargets()
@@ -281,6 +398,14 @@ namespace BombRMan.Hubs
 
                 return new Point[0];
             }
+        }
+
+        public enum Direction
+        {
+            NORTH,
+            SOUTH,
+            EAST,
+            WEST
         }
 
         public enum Keys

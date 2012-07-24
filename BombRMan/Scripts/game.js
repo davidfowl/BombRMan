@@ -99,10 +99,12 @@
             }
         },
         sendKeyState: function() {
+            var player = this.players[this.playerIndex];
             inputBuffer.push(keyState);
+
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer;
-                if(this.ticks % 15 === 0) {
+                if(this.ticks % 30 === 0 && inputBuffer.length > 0) {
                     gameServer.sendKeys(inputBuffer);
                     inputBuffer.splice(0, inputBuffer.length);
                 }
@@ -130,6 +132,14 @@
                 that.ghost = ghost;
                 ghost.moveTo(player.X, player.Y);
                 that.addSprite(ghost);
+            };
+
+            gameServer.playerLeft = function(player) {
+                var bomber = that.players[player.Index];
+                if(bomber) {
+                    that.removeSprite(bomber);
+                    that.players[player.Index] = null;
+                }
             };
 
             gameServer.initialize = function(players) {
@@ -174,6 +184,7 @@
         },
         update : function() {
             this.ticks++;
+
             if(this.inputManager.isKeyPress(window.Game.Keys.D)) {
                 window.Game.Debugging = !window.Game.Debugging;
             }
@@ -189,11 +200,11 @@
                 }
             }
 
+            this.sendKeyState();
+
             for(var key in keyState) {
                 prevKeyState[key] = keyState[key];
             }
-
-            this.sendKeyState();
         },
         movable:  function(x, y) {
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

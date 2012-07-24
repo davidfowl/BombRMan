@@ -457,6 +457,8 @@ namespace BombRMan.Hubs
             PlayerState state;
             if (_activePlayers.TryRemove(Context.ConnectionId, out state))
             {
+                Clients.playerLeft(state.Player);
+
                 Point pos = _initialPositions[state.Player.Index];
                 _availablePlayers.Push(new Player
                 {

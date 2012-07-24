@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using SignalR;
 using SignalR.Hubs;
-using System.Diagnostics;
 
 namespace BombRMan.Hubs
 {
@@ -42,8 +41,8 @@ namespace BombRMan.Hubs
 
             if (Interlocked.Exchange(ref _gameLoopRunning, 1) == 0)
             {
-                new Thread(_ => StartGameLoop()).Start();
-                new Thread(_ => StartUpdateLoop()).Start();
+                new Thread(_ => RunGameLoop()).Start();
+                new Thread(_ => RunUpdateLoop()).Start();
             }
 
             Player player;
@@ -87,15 +86,16 @@ namespace BombRMan.Hubs
                     Direction = Direction.SOUTH
                 });
             }
+
             return stack;
         }
 
-        public void SendKeys(JObject keyState)
+        public void SendKeys(Dictionary<Keys, bool> keyState)
         {
             PlayerState state;
             if (_activePlayers.TryGetValue(Context.ConnectionId, out state))
             {
-                state.Inputs.Enqueue(keyState.ToObject<Dictionary<Keys, bool>>());
+                state.Inputs.Enqueue(keyState);
             }
         }
 
@@ -115,6 +115,11 @@ namespace BombRMan.Hubs
 
         public class Player
         {
+            private static readonly Point[] EastTargets = new Point[] { new Point(1, -1), new Point(1, 0), new Point(1, 1) };
+            private static readonly Point[] WestTargets = new Point[] { new Point(-1, -1), new Point(-1, 0), new Point(-1, 1) };
+            private static readonly Point[] NorthTargets = new Point[] { new Point(-1, -1), new Point(0, -1), new Point(1, -1) };
+            private static readonly Point[] SouthTargets = new Point[] { new Point(-1, 1), new Point(0, 1), new Point(1, 1) };
+
             public int X { get; set; }
             public int Y { get; set; }
             public int ExactX { get; set; }
@@ -190,8 +195,8 @@ namespace BombRMan.Hubs
                 var sourceLeft = effectiveX * _map.TileSize;
                 var sourceTop = effectiveY * _map.TileSize;
                 var sourceRect = new RectangleF(sourceLeft, sourceTop, _map.TileSize, _map.TileSize);
-                List<Point> collisions = new List<Point>();
-                List<Point> possible = new List<Point>();
+                var collisions = new List<Point>();
+                var possible = new List<Point>();
 
                 foreach (var t in targets)
                 {
@@ -377,11 +382,11 @@ namespace BombRMan.Hubs
             {
                 if (DirectionX == 1)
                 {
-                    return new Point[] { new Point(1, -1), new Point(1, 0), new Point(1, 1) };
+                    return EastTargets;
                 }
                 else if (DirectionX == -1)
                 {
-                    return new Point[] { new Point(-1, -1), new Point(-1, 0), new Point(-1, 1) };
+                    return WestTargets;
                 }
 
                 return new Point[0];
@@ -391,11 +396,11 @@ namespace BombRMan.Hubs
             {
                 if (DirectionY == -1)
                 {
-                    return new Point[] { new Point(-1, -1), new Point(0, -1), new Point(1, -1) };
+                    return NorthTargets;
                 }
                 else if (DirectionY == 1)
                 {
-                    return new Point[] { new Point(-1, 1), new Point(0, 1), new Point(1, 1) };
+                    return SouthTargets;
                 }
 
                 return new Point[0];
@@ -422,10 +427,11 @@ namespace BombRMan.Hubs
         }
 
 
-        private void StartUpdateLoop()
+        private void RunUpdateLoop()
         {
             var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
             var interval = TimeSpan.FromMilliseconds(45);
+
             while (true)
             {
                 foreach (var pair in _activePlayers)
@@ -437,9 +443,10 @@ namespace BombRMan.Hubs
             }
         }
 
-        private static void StartGameLoop()
+        private static void RunGameLoop()
         {
             var interval = TimeSpan.FromMilliseconds(15);
+
             while (true)
             {
                 foreach (var pair in _activePlayers)
@@ -453,13 +460,6 @@ namespace BombRMan.Hubs
 
                 Thread.Sleep(interval);
             }
-        }
-
-
-        public class PlayerState
-        {
-            public LimitedQueue<Dictionary<Keys, bool>> Inputs { get; set; }
-            public Player Player { get; set; }
         }
 
         public Task Disconnect()
@@ -480,6 +480,12 @@ namespace BombRMan.Hubs
             }
 
             return null;
+        }
+
+        public class PlayerState
+        {
+            public LimitedQueue<Dictionary<Keys, bool>> Inputs { get; set; }
+            public Player Player { get; set; }
         }
 
         public class Map

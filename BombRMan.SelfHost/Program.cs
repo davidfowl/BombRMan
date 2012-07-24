@@ -1,5 +1,6 @@
 ﻿using System;
 using SignalR.Hosting.Self;
+using System.Diagnostics;
 
 namespace BombRMan.SelfHost
 {
@@ -7,6 +8,9 @@ namespace BombRMan.SelfHost
     {
         static void Main(string[] args)
         {
+            Debug.Listeners.Add(new ConsoleTraceListener());
+            Debug.AutoFlush = true;
+
             var server = new Server("http://localhost:8081/");
             server.MapHubs();
 

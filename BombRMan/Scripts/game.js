@@ -121,6 +121,7 @@
                 
                 // Create a ghost
                 var ghost = new window.Game.Bomber(false);
+                ghost.transparent = true;
                 that.ghost = ghost;
                 ghost.moveTo(player.X, player.Y);
                 that.addSprite(ghost);

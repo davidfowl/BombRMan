@@ -171,6 +171,8 @@ namespace BombRMan.Hubs
                     DirectionX = 1;
                 }
 
+                SetDirection(DirectionX, DirectionY);
+
                 x += DirectionX * DELTA;
                 y += DirectionY * DELTA;
 

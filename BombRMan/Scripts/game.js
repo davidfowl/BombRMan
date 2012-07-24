@@ -3,7 +3,8 @@
         MAP_HEIGHT = 13,
         TILE_SIZE = 32,
         keyState = {},
-        prevKeyState = {};
+        prevKeyState = {},
+        inputBuffer = [];
 
     window.Game.Engine = function(assetManager) {
         this.assetManager = assetManager;
@@ -98,9 +99,13 @@
             }
         },
         sendKeyState: function() {
+            inputBuffer.push(keyState);
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer;
-                gameServer.sendKeys(keyState);
+                if(this.ticks % 15 === 0) {
+                    gameServer.sendKeys(inputBuffer);
+                    inputBuffer.splice(0, inputBuffer.length);
+                }
             }
         },
         initialize: function() {

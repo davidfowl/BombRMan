@@ -50,7 +50,7 @@ namespace BombRMan.Hubs
             {
                 _activePlayers.TryAdd(Context.ConnectionId, new PlayerState
                 {
-                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(30),
+                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(1000),
                     Player = player
                 });
 
@@ -90,12 +90,18 @@ namespace BombRMan.Hubs
             return stack;
         }
 
-        public void SendKeys(Dictionary<Keys, bool> keyState)
+        public void SendKeys(Dictionary<Keys, bool>[] keyStates)
         {
             PlayerState state;
             if (_activePlayers.TryGetValue(Context.ConnectionId, out state))
             {
-                state.Inputs.Enqueue(keyState);
+                lock (state)
+                {
+                    foreach (var keyState in keyStates)
+                    {
+                        state.Inputs.Enqueue(keyState);
+                    }
+                }
             }
         }
 
@@ -215,22 +221,6 @@ namespace BombRMan.Hubs
                     {
                         possible.Add(new Point(targetX, targetY));
                     }
-                }
-
-                Debug.WriteLine("DATA");
-                Debug.WriteLine("{0}, {1}", effectiveX, effectiveY);
-                Debug.WriteLine("{0}, {1}", actualX, actualY);
-
-                Debug.WriteLine("COLLISIONS");
-                foreach (var c in collisions)
-                {
-                    Debug.WriteLine(c);
-                }
-
-                Debug.WriteLine("POSSIBLE");
-                foreach (var p in possible)
-                {
-                    Debug.WriteLine(p);
                 }
 
                 if (collisions.Count == 0)

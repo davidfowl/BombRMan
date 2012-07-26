@@ -1,7 +1,6 @@
 (function ($, window) {
     var DELTA = 10,
-        POWER = 100,
-        FRAME_RATE = Math.floor(window.Game.TicksPerSecond / 2);
+        POWER = 100;
 
     window.Game.Bomber = function (handleInput) {
         this.x = 0;
@@ -87,8 +86,6 @@
         updateAnimation: function (game) {
             var moving = this.directionX !== 0 || this.directionY !== 0;
 
-            window.Game.Logger.log('Moving = ' + moving);
-
             if (moving) {
                 if (!this.moving) {
                     this.moving = true;
@@ -118,9 +115,10 @@
             }
 
             if (this.moving) {
+                var frameRate = Math.floor(window.Game.TicksPerSecond / 2);
                 this.movingTicks++;
 
-                if (this.movingTicks % FRAME_RATE === 0) {
+                if (this.movingTicks % frameRate === 0) {
                     this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
                 }
             }

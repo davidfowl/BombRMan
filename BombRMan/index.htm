@@ -2,6 +2,7 @@
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <script type="text/javascript" src="Scripts/jquery-1.7.2.min.js"></script>
+    <script type="text/javascript" src="Scripts/jquery-ui-1.8.22.custom.min.js"></script>
     <script src="Scripts/jquery.signalR-0.5.2.min.js" type="text/javascript"></script>
     <script type="text/javascript" src="signalr/hubs"></script>
     <script type="text/javascript" src="Scripts/constants.js"></script>
@@ -15,6 +16,19 @@
     <script type="text/javascript" src="Scripts/assman.js"></script>
     <script type="text/javascript" src="Scripts/renderer.js"></script>
     <script type="text/javascript" src="Scripts/main.js"></script>
+    <link href="css/ui-lightness/jquery-ui-1.8.22.custom.css" rel="stylesheet" type="text/css" />
+    <script type="text/javascript">
+        $(function () {
+            $('#fps-slider').slider({
+                min: 0,
+                max: 60,
+                value: window.Game.TicksPerSecond,
+                change: function (event, ui) {
+                    window.Game.TicksPerSecond = ui.value;
+                }
+            });
+        });
+    </script>
     <style type="text/css">
         html , body {
             background: #212121; 
@@ -33,9 +47,14 @@
     <canvas id="canvas" width="480" height="415">
     </canvas>
 
+    <div style="padding:20px">
+        <div style="margin-bottom:10px;float:left;margin-right: 15px">FPS:</div> <div id="fps-slider" style="width:100px; float:left"></div>
+        <div style="clear:both" />
+    </div>
+
     <div>
-    <h3>Press 'd' to toggle debug mode.</h3>
-    <div id="debug"></div>
+        <h3>Press 'd' to toggle debug mode.</h3>
+        <div id="debug"></div>
     </div>
 </body>
 </html>

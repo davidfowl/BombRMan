@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SignalR;
 using SignalR.Hubs;
+using Newtonsoft.Json;
 
 namespace BombRMan.Hubs
 {
@@ -34,6 +35,7 @@ namespace BombRMan.Hubs
         private static Map _map = new Map(mapData, 15, 13, 32);
         private const int POWER = 100;
         private const int DELTA = 10;
+        private const int FPS = 60;
 
         public Task Connect()
         {
@@ -50,7 +52,7 @@ namespace BombRMan.Hubs
             {
                 _activePlayers.TryAdd(Context.ConnectionId, new PlayerState
                 {
-                    Inputs = new LimitedQueue<Dictionary<Keys, bool>>(1000),
+                    Inputs = new ConcurrentQueue<KeyboardState>(),
                     Player = player
                 });
 
@@ -90,16 +92,16 @@ namespace BombRMan.Hubs
             return stack;
         }
 
-        public void SendKeys(Dictionary<Keys, bool>[] keyStates)
+        public void SendKeys(KeyboardState[] inputs)
         {
             PlayerState state;
             if (_activePlayers.TryGetValue(Context.ConnectionId, out state))
             {
                 lock (state)
                 {
-                    foreach (var keyState in keyStates)
+                    foreach (var input in inputs)
                     {
-                        state.Inputs.Enqueue(keyState);
+                        state.Inputs.Enqueue(input);
                     }
                 }
             }
@@ -137,8 +139,13 @@ namespace BombRMan.Hubs
 
             public int Index { get; set; }
 
-            public void HandleInput(Dictionary<Keys, bool> input)
+            public int LastProcessed { get; set; }
+
+            public void Update(KeyboardState input)
             {
+                Debug.WriteLine("Processed " + input.Id);
+                LastProcessed = input.Id;
+
                 int x = ExactX,
                     y = ExactY;
 
@@ -416,8 +423,7 @@ namespace BombRMan.Hubs
             P = 80
         }
 
-
-        private void RunUpdateLoop()
+        public static void RunUpdateLoop()
         {
             var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
             var interval = TimeSpan.FromMilliseconds(45);
@@ -433,18 +439,18 @@ namespace BombRMan.Hubs
             }
         }
 
-        private static void RunGameLoop()
+        public static void RunGameLoop()
         {
-            var interval = TimeSpan.FromMilliseconds(15);
+            var interval = TimeSpan.FromMilliseconds(1000 / FPS);
 
             while (true)
             {
                 foreach (var pair in _activePlayers)
                 {
-                    Dictionary<Keys, bool> inputState;
-                    if (pair.Value.Inputs.TryDequeue(out inputState))
+                    KeyboardState input;
+                    if (pair.Value.Inputs.TryDequeue(out input))
                     {
-                        pair.Value.Player.HandleInput(inputState);
+                        pair.Value.Player.Update(input);
                     }
                 }
 
@@ -476,8 +482,42 @@ namespace BombRMan.Hubs
 
         public class PlayerState
         {
-            public LimitedQueue<Dictionary<Keys, bool>> Inputs { get; set; }
+            public ConcurrentQueue<KeyboardState> Inputs { get; set; }
             public Player Player { get; set; }
+        }
+
+        public class KeyboardState
+        {
+            private readonly Dictionary<Keys, bool> _keyState;
+            public int Id { get; private set; }
+
+            public KeyboardState(Dictionary<Keys, bool> keyState, int id)
+            {
+                _keyState = keyState;
+                Id = id;
+            }
+
+            public bool this[Keys key]
+            {
+                get
+                {
+                    return _keyState[key];
+                }
+            }
+
+            public bool Empty
+            {
+                get
+                {
+                    return !this[Keys.A] &&
+                           !this[Keys.D] &&
+                           !this[Keys.DOWN] &&
+                           !this[Keys.LEFT] &&
+                           !this[Keys.RIGHT] &&
+                           !this[Keys.UP] &&
+                           !this[Keys.P];
+                }
+            }
         }
 
         public class Map

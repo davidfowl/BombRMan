@@ -56,7 +56,7 @@
 
 
                         // Bounding Box 
-                        if (window.Game.Debugging) {
+                        /*if (window.Game.Debugging) {
                             context.fillStyle = 'orange';
                             context.fillRect(sprite.x * game.map.tileSize, sprite.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
 
@@ -75,7 +75,7 @@
                                 context.fillStyle = 'yellow';
                                 context.fillRect(sprite.candidate.x * game.map.tileSize, sprite.candidate.y * game.map.tileSize, game.map.tileSize, game.map.tileSize);
                             }
-                        }
+                        }*/
 
                         if (sprite.transparent) {
                             context.globalAlpha = 0.5;

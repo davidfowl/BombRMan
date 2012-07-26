@@ -4,7 +4,21 @@
         TILE_SIZE = 32,
         keyState = {},
         prevKeyState = {},
-        inputBuffer = [];
+        inputId = 0,
+        lastProcessed = 0,
+        serverInput = 0,
+        inputs = [],
+        localInput = 0;
+
+
+    function empty(state) {
+        for(var key in window.Game.Keys) {
+            if(state[window.Game.Keys[key]] === true) {
+                return false;
+            }
+        }
+        return true;
+    }
 
     window.Game.Engine = function(assetManager) {
         this.assetManager = assetManager;
@@ -99,16 +113,21 @@
             }
         },
         sendKeyState: function() {
-            var player = this.players[this.playerIndex];
-            inputBuffer.push(keyState);
+            var player = this.players[this.playerIndex],
+                updateTick = Math.max(1, Math.floor(window.Game.TicksPerSecond / 2));
 
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer;
-                if(this.ticks % 30 === 0 && inputBuffer.length > 0) {
-                    gameServer.sendKeys(inputBuffer);
-                    inputBuffer.splice(0, inputBuffer.length);
+                if(this.ticks % updateTick === 0) {                    
+                    var got = inputs.length;
+                    gameServer.sendKeys(inputs.slice(serverInput, got));
+                    serverInput = got;
                 }
             }
+
+            // if(empty(prevKeyState) && empty(keyState)) return;
+
+            inputs.push({ keyState: keyState, id: inputId++ });
         },
         initialize: function() {
             var that = this,
@@ -132,6 +151,13 @@
                 that.ghost = ghost;
                 ghost.moveTo(player.X, player.Y);
                 that.addSprite(ghost);
+
+                // Create a local ghost
+                var local = new window.Game.Bomber();
+                local.transparent = true;
+                that.local = local;
+                local.moveTo(player.X, player.Y);
+                that.addSprite(local);
             };
 
             gameServer.playerLeft = function(player) {
@@ -160,6 +186,7 @@
                 var sprite = null;
                 if(player.Index === that.playerIndex) {
                     sprite = that.ghost;
+                    lastProcessed = player.LastProcessed;
                 }
                 else {
                     sprite = that.players[player.Index];
@@ -195,8 +222,35 @@
 
             for(var i = 0; i < this.sprites.length; ++i) {
                 var sprite = this.sprites[i];
-                if(sprite.update) {
+                if(sprite.update && sprite !== this.local) {
                     sprite.update(this);
+                }
+            }
+
+            if(this.local) {            
+                var that = this;
+                if(localInput < inputs.length) {
+                    this.local.update({ assetManager: this.assetManager,
+                                        map : this.map,
+                                        movable: function(x, y) {
+                                            return that.movable(x, y);
+                                        },
+                                        getSpritesAt: function(x, y) {
+                                            return that.getSpritesAt(x, y);
+                                        }, 
+                                        inputManager: { 
+                                            isKeyUp: function(key) {
+                                                return inputs[localInput].keyState[key] === false;
+                                            },
+                                            isKeyDown: function(key) {
+                                                return inputs[localInput].keyState[key] === true;
+                                            },
+                                            isKeyPress: function(key) {
+                                                return false;
+                                            }
+                                        } 
+                                      });
+                    localInput++;
                 }
             }
 
@@ -205,6 +259,10 @@
             for(var key in keyState) {
                 prevKeyState[key] = keyState[key];
             }
+
+            window.Game.Logger.log('last processed input = ' + lastProcessed);
+            window.Game.Logger.log('last sent input = ' + (inputId - 1));
+            window.Game.Logger.log('local processed input = ' + localInput);
         },
         movable:  function(x, y) {
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

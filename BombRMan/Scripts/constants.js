@@ -39,8 +39,7 @@ window.Game.Direction = {
     WEST: 3
 };
 
-window.Game.FPS = 1000 / 60;
-window.Game.TicksPerSecond = 30;
+window.Game.TicksPerSecond = 60;
 window.Game.Debugging = false;
 window.Game.MoveSprites = true;
 

@@ -1,14 +1,15 @@
 (function ($, window) {
 
     var requestAnimFrame = (function () {
-        return window.requestAnimationFrame ||
-     window.webkitRequestAnimationFrame ||
-     window.mozRequestAnimationFrame ||
-     window.oRequestAnimationFrame ||
-     window.msRequestAnimationFrame ||
-     function (callback, element) {
-         window.setTimeout(callback, window.Game.FPS);
-     };
+        // Easier for debugging can change the fps dynamically
+        //        return window.requestAnimationFrame ||
+        //     window.webkitRequestAnimationFrame ||
+        //     window.mozRequestAnimationFrame ||
+        //     window.oRequestAnimationFrame ||
+        //     window.msRequestAnimationFrame ||
+        return function (callback, element) {
+            window.setTimeout(callback, 1000 / window.Game.TicksPerSecond);
+        };
     })();
 
     $(function () {
@@ -39,6 +40,7 @@
 
     function animate(engine, renderer, canvas, context) {
         window.Game.Logger.clear();
+        window.Game.Logger.log('FPS = ' + window.Game.TicksPerSecond);
 
         engine.update();
 

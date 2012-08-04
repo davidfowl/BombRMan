@@ -118,14 +118,17 @@
 
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer;
-                if(this.ticks % updateTick === 0) {                    
+                if(this.ticks % updateTick === 0) {
                     var got = inputs.length;
-                    gameServer.sendKeys(inputs.slice(serverInput, got));
+                    var sub = inputs.slice(serverInput, got);
+                    if(sub.length > 0) {
+                        gameServer.sendKeys(sub);
+                    }
                     serverInput = got;
                 }
             }
 
-            // if(empty(prevKeyState) && empty(keyState)) return;
+            if(empty(prevKeyState) && empty(keyState)) return;
 
             inputs.push({ keyState: keyState, id: inputId++ });
         },
@@ -211,6 +214,7 @@
         },
         update : function() {
             this.ticks++;
+            this.sendKeyState();
 
             if(this.inputManager.isKeyPress(window.Game.Keys.D)) {
                 window.Game.Debugging = !window.Game.Debugging;
@@ -253,8 +257,6 @@
                     localInput++;
                 }
             }
-
-            this.sendKeyState();
 
             for(var key in keyState) {
                 prevKeyState[key] = keyState[key];

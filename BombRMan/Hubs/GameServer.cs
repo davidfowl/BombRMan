@@ -290,7 +290,7 @@ namespace BombRMan.Hubs
                         int effectiveDirectionX = 0;
                         int effectiveDirectionY = 0;
 
-                        if (absX == 0)
+                        if (absX == 100)
                         {
                             effectiveDirectionX = 0;
                         }

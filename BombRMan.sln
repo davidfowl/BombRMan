@@ -12,6 +12,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{B1F9AD
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BombRMan.SelfHost", "BombRMan.SelfHost\BombRMan.SelfHost.csproj", "{A393D84C-EA27-48F5-9AC6-832570E73C3D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BombRman.Tests", "BombRman.Tests\BombRman.Tests.csproj", "{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,6 +44,16 @@ Global
 		{A393D84C-EA27-48F5-9AC6-832570E73C3D}.Release|Mixed Platforms.Build.0 = Release|x86
 		{A393D84C-EA27-48F5-9AC6-832570E73C3D}.Release|x86.ActiveCfg = Release|x86
 		{A393D84C-EA27-48F5-9AC6-832570E73C3D}.Release|x86.Build.0 = Release|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Debug|Any CPU.ActiveCfg = Debug|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Debug|Mixed Platforms.ActiveCfg = Debug|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Debug|Mixed Platforms.Build.0 = Debug|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Debug|x86.ActiveCfg = Debug|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Debug|x86.Build.0 = Debug|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Release|Any CPU.ActiveCfg = Release|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Release|Mixed Platforms.ActiveCfg = Release|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Release|Mixed Platforms.Build.0 = Release|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Release|x86.ActiveCfg = Release|x86
+		{78FC583D-52F0-4663-BA88-1CEFE3FAED0D}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

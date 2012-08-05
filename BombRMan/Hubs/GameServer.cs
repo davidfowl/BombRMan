@@ -106,6 +106,57 @@ namespace BombRMan.Hubs
             }
         }
 
+        public static void RunGameLoop()
+        {
+            var frameTicks = (int)Math.Round(1000.0 / FPS);
+            var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
+            var lastUpdate = 0;
+
+            while (true)
+            {
+                if (Environment.TickCount >= lastUpdate + frameTicks)
+                {
+                    lastUpdate = Environment.TickCount;
+
+                    Update(context);
+                }
+            }
+        }
+
+        private static void Update(IHubContext context)
+        {
+            foreach (var pair in _activePlayers)
+            {
+                KeyboardState input;
+                if (pair.Value.Inputs.TryDequeue(out input))
+                {
+                    pair.Value.Player.Update(input);
+                    context.Clients.updatePlayerState(pair.Value.Player);
+                }
+            }
+        }
+
+        public Task Disconnect()
+        {
+            PlayerState state;
+            if (_activePlayers.TryRemove(Context.ConnectionId, out state))
+            {
+                Clients.playerLeft(state.Player);
+
+                Point pos = _initialPositions[state.Player.Index];
+                _availablePlayers.Push(new Player
+                {
+                    Index = state.Player.Index,
+                    X = pos.X,
+                    Y = pos.Y,
+                    ExactX = pos.X * POWER,
+                    ExactY = pos.Y * POWER,
+                    Direction = Direction.SOUTH
+                });
+            }
+
+            return null;
+        }
 
         private static bool Movable(int x, int y)
         {
@@ -142,8 +193,6 @@ namespace BombRMan.Hubs
 
             public void Update(KeyboardState input)
             {
-                Debug.WriteLine("Processing " + input.Id);
-                Debug.Write("State = " + input);
                 LastProcessed = input.Id;
 
                 int x = ExactX,
@@ -423,49 +472,6 @@ namespace BombRMan.Hubs
             P = 80
         }
 
-        public static void RunGameLoop()
-        {
-            var interval = TimeSpan.FromMilliseconds(1000 / FPS);
-            var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
-
-            while (true)
-            {
-                foreach (var pair in _activePlayers)
-                {
-                    KeyboardState input;
-                    if (pair.Value.Inputs.TryDequeue(out input))
-                    {
-                        pair.Value.Player.Update(input);
-                        context.Clients.updatePlayerState(pair.Value.Player);
-                    }
-                }
-
-                Thread.Sleep(interval);
-            }
-        }
-
-        public Task Disconnect()
-        {
-            PlayerState state;
-            if (_activePlayers.TryRemove(Context.ConnectionId, out state))
-            {
-                Clients.playerLeft(state.Player);
-
-                Point pos = _initialPositions[state.Player.Index];
-                _availablePlayers.Push(new Player
-                {
-                    Index = state.Player.Index,
-                    X = pos.X,
-                    Y = pos.Y,
-                    ExactX = pos.X * POWER,
-                    ExactY = pos.Y * POWER,
-                    Direction = Direction.SOUTH
-                });
-            }
-
-            return null;
-        }
-
         public class PlayerState
         {
             public ConcurrentQueue<KeyboardState> Inputs { get; set; }
@@ -574,29 +580,6 @@ namespace BombRMan.Hubs
             GRASS = 0,
             WALL = 2,
             BRICK = 3,
-        }
-
-        public class LimitedQueue<T> : ConcurrentQueue<T>
-        {
-            public int Limit
-            {
-                get;
-                set;
-            }
-
-            public LimitedQueue(int limit)
-            {
-                Limit = limit;
-            }
-
-            public new void Enqueue(T item)
-            {
-                T element;
-                if (Count >= Limit && TryDequeue(out element))
-                {
-                }
-                base.Enqueue(item);
-            }
         }
     }
 }

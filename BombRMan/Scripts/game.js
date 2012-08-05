@@ -120,7 +120,7 @@
             
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer,
-                    updateTick = $.connection.hub.transport.name === 'webSockets' ?  
+                    updateTick = $.connection.hub.transport.name !== 'webSockets' ?  
                             Math.max(1, Math.floor(window.Game.TicksPerSecond / 5)) : 
                             1;
 

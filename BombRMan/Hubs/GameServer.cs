@@ -44,7 +44,6 @@ namespace BombRMan.Hubs
             if (Interlocked.Exchange(ref _gameLoopRunning, 1) == 0)
             {
                 new Thread(_ => RunGameLoop()).Start();
-                new Thread(_ => RunUpdateLoop()).Start();
             }
 
             Player player;
@@ -424,25 +423,10 @@ namespace BombRMan.Hubs
             P = 80
         }
 
-        public static void RunUpdateLoop()
-        {
-            var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
-            var interval = TimeSpan.FromMilliseconds(45);
-
-            while (true)
-            {
-                foreach (var pair in _activePlayers)
-                {
-                    context.Clients.updatePlayerState(pair.Value.Player);
-                }
-
-                Thread.Sleep(interval);
-            }
-        }
-
         public static void RunGameLoop()
         {
             var interval = TimeSpan.FromMilliseconds(1000 / FPS);
+            var context = GlobalHost.ConnectionManager.GetHubContext<GameServer>();
 
             while (true)
             {
@@ -452,6 +436,7 @@ namespace BombRMan.Hubs
                     if (pair.Value.Inputs.TryDequeue(out input))
                     {
                         pair.Value.Player.Update(input);
+                        context.Clients.updatePlayerState(pair.Value.Player);
                     }
                 }
 

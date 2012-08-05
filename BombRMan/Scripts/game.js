@@ -7,7 +7,6 @@
         inputId = 0,
         lastSentInputId = 0,
         lastProcessed = 0,
-        serverInput = 0,
         inputs = [];
 
 
@@ -126,13 +125,11 @@
                             1;
 
                 if(this.ticks % updateTick === 0) {
-                    var got = inputs.length;
-                    var sub = inputs.slice(serverInput, got);
-                    if(sub.length > 0) {
-                        gameServer.sendKeys(sub);
-                        lastSentInputId = sub[sub.length - 1].id;
+                    var buffer = inputs.splice(0, inputs.length);
+                    if(buffer.length > 0) {
+                        gameServer.sendKeys(buffer);
+                        lastSentInputId = buffer[buffer.length - 1].id;
                     }
-                    serverInput = got;
                 }
             }
         },

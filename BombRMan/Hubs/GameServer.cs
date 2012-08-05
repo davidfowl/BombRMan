@@ -41,10 +41,7 @@ namespace BombRMan.Hubs
         {
             Caller.initializeMap(mapData).Wait();
 
-            if (Interlocked.Exchange(ref _gameLoopRunning, 1) == 0)
-            {
-                new Thread(_ => RunGameLoop()).Start();
-            }
+            EnsureGameLoop();
 
             Player player;
             if (_availablePlayers.TryPop(out player))
@@ -61,8 +58,18 @@ namespace BombRMan.Hubs
             return Clients.initialize(_activePlayers.Values.Select(v => v.Player));
         }
 
+        private static void EnsureGameLoop()
+        {
+            if (Interlocked.Exchange(ref _gameLoopRunning, 1) == 0)
+            {
+                new Thread(_ => RunGameLoop()).Start();
+            }
+        }
+
         public Task Reconnect(IEnumerable<string> groups)
         {
+            EnsureGameLoop();
+
             return null;
         }
 
@@ -114,11 +121,16 @@ namespace BombRMan.Hubs
 
             while (true)
             {
-                if (Environment.TickCount >= lastUpdate + frameTicks)
+                int delta = (lastUpdate + frameTicks) - Environment.TickCount;
+                if (delta < 0)
                 {
                     lastUpdate = Environment.TickCount;
 
                     Update(context);
+                }
+                else
+                {
+                    Thread.Sleep(TimeSpan.FromTicks(delta));
                 }
             }
         }

@@ -5,6 +5,7 @@
         keyState = {},
         prevKeyState = {},
         inputId = 0,
+        lastSentInputId = 0,
         lastProcessed = 0,
         serverInput = 0,
         inputs = [];
@@ -129,6 +130,7 @@
                     var sub = inputs.slice(serverInput, got);
                     if(sub.length > 0) {
                         gameServer.sendKeys(sub);
+                        lastSentInputId = sub[sub.length - 1].id;
                     }
                     serverInput = got;
                 }
@@ -230,8 +232,9 @@
                 prevKeyState[key] = keyState[key];
             }
 
-            window.Game.Logger.log('last processed input = ' + lastProcessed);
-            window.Game.Logger.log('last sent input = ' + (inputId - 1));
+            window.Game.Logger.log('last input = ' + (inputId - 1));
+            window.Game.Logger.log('last sent input = ' + lastSentInputId);
+            window.Game.Logger.log('last server processed input = ' + lastProcessed);
         },
         movable:  function(x, y) {
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

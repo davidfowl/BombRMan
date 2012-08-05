@@ -7,8 +7,7 @@
         inputId = 0,
         lastProcessed = 0,
         serverInput = 0,
-        inputs = [],
-        localInput = 0;
+        inputs = [];
 
 
     function empty(state) {
@@ -114,7 +113,9 @@
         },
         sendKeyState: function() {
             var player = this.players[this.playerIndex],
-                updateTick = Math.max(1, Math.floor(window.Game.TicksPerSecond / 2));
+                updateTick = $.connection.hub.transport.name === 'webSockets' ?  
+                            Math.max(1, Math.floor(window.Game.TicksPerSecond / 5)) : 
+                            1;
 
             if(!(empty(prevKeyState) && empty(keyState))) { 
                 inputs.push({ keyState: $.extend({}, keyState), id: inputId++ });
@@ -154,13 +155,6 @@
                 that.ghost = ghost;
                 ghost.moveTo(player.X, player.Y);
                 that.addSprite(ghost);
-
-                // Create a local ghost
-                var local = new window.Game.Bomber();
-                local.transparent = true;
-                that.local = local;
-                local.moveTo(player.X, player.Y);
-                that.addSprite(local);
             };
 
             gameServer.playerLeft = function(player) {
@@ -226,35 +220,8 @@
 
             for(var i = 0; i < this.sprites.length; ++i) {
                 var sprite = this.sprites[i];
-                if(sprite.update && sprite !== this.local) {
+                if(sprite.update) {
                     sprite.update(this);
-                }
-            }
-
-            if(this.local) {            
-                var that = this;
-                if(localInput < inputs.length) {
-                    this.local.update({ assetManager: this.assetManager,
-                                        map : this.map,
-                                        movable: function(x, y) {
-                                            return that.movable(x, y);
-                                        },
-                                        getSpritesAt: function(x, y) {
-                                            return that.getSpritesAt(x, y);
-                                        }, 
-                                        inputManager: { 
-                                            isKeyUp: function(key) {
-                                                return inputs[localInput].keyState[key] === false;
-                                            },
-                                            isKeyDown: function(key) {
-                                                return inputs[localInput].keyState[key] === true;
-                                            },
-                                            isKeyPress: function(key) {
-                                                return false;
-                                            }
-                                        } 
-                                      });
-                    localInput++;
                 }
             }
 
@@ -264,7 +231,6 @@
 
             window.Game.Logger.log('last processed input = ' + lastProcessed);
             window.Game.Logger.log('last sent input = ' + (inputId - 1));
-            window.Game.Logger.log('local processed input = ' + localInput);
         },
         movable:  function(x, y) {
             if(y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

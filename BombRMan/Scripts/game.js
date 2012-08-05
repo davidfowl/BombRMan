@@ -112,17 +112,18 @@
             }
         },
         sendKeyState: function() {
-            var player = this.players[this.playerIndex],
-                updateTick = $.connection.hub.transport.name === 'webSockets' ?  
-                            Math.max(1, Math.floor(window.Game.TicksPerSecond / 5)) : 
-                            1;
+            var player = this.players[this.playerIndex];
 
             if(!(empty(prevKeyState) && empty(keyState))) { 
                 inputs.push({ keyState: $.extend({}, keyState), id: inputId++ });
             }
             
             if($.connection.hub.state === $.signalR.connectionState.connected) {
-                var gameServer = $.connection.gameServer;
+                var gameServer = $.connection.gameServer,
+                    updateTick = $.connection.hub.transport.name === 'webSockets' ?  
+                            Math.max(1, Math.floor(window.Game.TicksPerSecond / 5)) : 
+                            1;
+
                 if(this.ticks % updateTick === 0) {
                     var got = inputs.length;
                     var sub = inputs.slice(serverInput, got);

@@ -116,6 +116,10 @@
             var player = this.players[this.playerIndex],
                 updateTick = Math.max(1, Math.floor(window.Game.TicksPerSecond / 2));
 
+            if(!(empty(prevKeyState) && empty(keyState))) { 
+                inputs.push({ keyState: $.extend({}, keyState), id: inputId++ });
+            }
+            
             if($.connection.hub.state === $.signalR.connectionState.connected) {
                 var gameServer = $.connection.gameServer;
                 if(this.ticks % updateTick === 0) {
@@ -127,10 +131,6 @@
                     serverInput = got;
                 }
             }
-
-            if(empty(prevKeyState) && empty(keyState)) return;
-
-            inputs.push({ keyState: keyState, id: inputId++ });
         },
         initialize: function() {
             var that = this,

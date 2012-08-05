@@ -4,11 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using SignalR;
 using SignalR.Hubs;
-using Newtonsoft.Json;
 
 namespace BombRMan.Hubs
 {
@@ -143,7 +143,8 @@ namespace BombRMan.Hubs
 
             public void Update(KeyboardState input)
             {
-                Debug.WriteLine("Processed " + input.Id);
+                Debug.WriteLine("Processing " + input.Id);
+                Debug.Write("State = " + input);
                 LastProcessed = input.Id;
 
                 int x = ExactX,
@@ -517,6 +518,26 @@ namespace BombRMan.Hubs
                            !this[Keys.UP] &&
                            !this[Keys.P];
                 }
+            }
+
+            public override string ToString()
+            {
+                var sb = new StringBuilder();
+                foreach (var value in Enum.GetValues(typeof(Keys)))
+                {
+                    if (sb.Length > 0)
+                    {
+                        sb.Append(", ");
+                    }
+
+                    sb.Append(Enum.GetName(typeof(Keys), value))
+                      .Append(" = ")
+                      .Append(this[(Keys)value]);
+                }
+
+                sb.AppendLine();
+
+                return sb.ToString();
             }
         }
 

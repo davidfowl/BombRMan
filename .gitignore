@@ -42,3 +42,4 @@ msbuild.ProjectImports.zip
 StyleCop.Cache
 UpgradeLog.htm
 .idea
+*.pubxml

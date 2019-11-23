@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
 
 namespace BombRMan.Hubs
 {
@@ -34,10 +35,12 @@ namespace BombRMan.Hubs
         private readonly ConcurrentDictionary<string, PlayerState> _activePlayers = new ConcurrentDictionary<string, PlayerState>();
         private readonly Map _map = new Map(_mapData, 15, 13, 32);
         private readonly IHubContext<GameServer> _hubContext;
+        private readonly IHostApplicationLifetime _hostApplicationLifetime;
 
-        public GameState(IHubContext<GameServer> hubContext)
+        public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime)
         {
             _hubContext = hubContext;
+            _hostApplicationLifetime = hostApplicationLifetime;
 
             new Thread(_ => RunGameLoop()).Start();
 
@@ -126,7 +129,7 @@ namespace BombRMan.Hubs
             var frameTicks = (int)Math.Round(1000.0 / FPS);
             var lastUpdate = 0;
 
-            while (true)
+            while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {
                 int delta = (lastUpdate + frameTicks) - Environment.TickCount;
                 if (delta < 0)

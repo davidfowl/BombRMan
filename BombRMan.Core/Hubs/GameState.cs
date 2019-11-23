@@ -137,7 +137,7 @@ namespace BombRMan.Hubs
                 }
                 else
                 {
-                    Thread.Sleep(TimeSpan.FromTicks(delta));
+                    Thread.Sleep(delta);
                 }
             }
         }

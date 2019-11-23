@@ -1,0 +1,10 @@
+{
+  "version": "1.0",
+  "defaultProvider": "jsdelivr",
+  "libraries": [
+    {
+      "library": "@microsoft/signalr@3.0.1",
+      "destination": "wwwroot/Scripts/@microsoft/signalr/"
+    }
+  ]
+}

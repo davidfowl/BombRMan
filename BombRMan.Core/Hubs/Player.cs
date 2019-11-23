@@ -54,14 +54,14 @@ namespace BombRMan.Hubs
                 DirectionX = 0;
             }
 
-            if (input[Keys.DOWN])
-            {
-                DirectionY = 1;
-            }
-
             if (input[Keys.UP])
             {
                 DirectionY = -1;
+            }
+
+            if (input[Keys.DOWN])
+            {
+                DirectionY = 1;
             }
 
             if (input[Keys.LEFT])

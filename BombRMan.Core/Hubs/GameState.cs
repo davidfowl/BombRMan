@@ -42,7 +42,9 @@ namespace BombRMan.Hubs
             _hubContext = hubContext;
             _hostApplicationLifetime = hostApplicationLifetime;
 
-            new Thread(_ => RunGameLoop()).Start();
+            var gameLoopThread = new Thread(_ => RunGameLoop());
+            gameLoopThread.IsBackground = true;
+            gameLoopThread.Start();
 
             _initialPositions = new Point[4];
             _initialPositions[0] = new Point(1, 1);

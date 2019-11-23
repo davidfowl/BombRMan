@@ -13,7 +13,7 @@ namespace BombRMan.Hubs
     {
         public const int POWER = 100;
         public const int DELTA = 10;
-        public const int FPS = 60;
+        public const int FPS = 120;
 
         static string _mapData = "222222222222222" +
                                  "200000000000002" +

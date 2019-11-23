@@ -116,12 +116,9 @@ namespace BombRMan.Hubs
             PlayerState state;
             if (_activePlayers.TryGetValue(playerId, out state))
             {
-                lock (state)
+                foreach (var input in inputs)
                 {
-                    foreach (var input in inputs)
-                    {
-                        state.Inputs.Enqueue(input);
-                    }
+                    state.Inputs.Enqueue(input);
                 }
             }
         }

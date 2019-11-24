@@ -15,7 +15,7 @@ namespace BombRMan.Hubs
     {
         public const int POWER = 100;
         public const int DELTA = 10;
-        public const int FPS = 120;
+        public const int FPS = 60;
 
         static string _mapData = "222222222222222" +
                                  "200000000000002" +
@@ -150,10 +150,8 @@ namespace BombRMan.Hubs
                     delta -= frameTicks;
 
                     Update();
-
-                    Interlocked.Increment(ref _updatesPerSecond);
                 }
-                
+
                 // Remove the carry over delta from update and store as lastUpdate
                 lastUpdate = update - delta;
 
@@ -163,6 +161,8 @@ namespace BombRMan.Hubs
 
         private void Update()
         {
+            Interlocked.Increment(ref _updatesPerSecond);
+
             foreach (var pair in _activePlayers)
             {
                 if (pair.Value.Inputs.TryDequeue(out KeyboardState input))

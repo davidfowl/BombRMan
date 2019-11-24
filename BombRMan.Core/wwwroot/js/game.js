@@ -125,21 +125,11 @@
                 inputs.push({ keyState: $.extend({}, keyState), id: inputId++, time: performance.now() });
             }
 
-            // TODO: Handle connected state
-            // if ($.connection.hub.state === $.signalR.connectionState.connected) {
-            //var gameServer = $.connection.gameServer,
-            //$.connection.hub.transport.name !== 'webSockets' ?
-            //   Math.max(1, Math.floor(window.Game.TicksPerSecond / 5)) : 
-            var updateTick = 1;
-
-            if (this.ticks % updateTick === 0) {
-                var buffer = inputs.splice(0, inputs.length);
-                if (buffer.length > 0) {
-                    this.gameServer.invoke('sendKeys', buffer);
-                    lastSentInputId = buffer[buffer.length - 1].id;
-                }
+            var buffer = inputs.splice(0, inputs.length);
+            if (buffer.length > 0) {
+                this.gameServer.invoke('sendKeys', buffer);
+                lastSentInputId = buffer[buffer.length - 1].id;
             }
-            //}
         },
         initialize: function () {
             var that = this;
@@ -214,9 +204,6 @@
                 serverStats = stats;
             });
 
-            // $.connection.hub.logging = true;
-            // $.connection.hub.url = 'http://localhost:8081/signalr';
-            // $.connection.hub.start();
             this.gameServer.start();
         },
         update: function () {

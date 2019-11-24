@@ -27,9 +27,12 @@ namespace BombRMan.Hubs
 
         public int LastProcessed { get; set; }
 
+        public long LastProcessedTime { get; set; }
+
         public void Update(KeyboardState input)
         {
             LastProcessed = input.Id;
+            LastProcessedTime = input.Time;
 
             int x = ExactX,
                 y = ExactY;

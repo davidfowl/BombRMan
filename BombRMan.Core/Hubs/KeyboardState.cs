@@ -7,12 +7,14 @@ namespace BombRMan.Hubs
     public class KeyboardState
     {
         private readonly Dictionary<Keys, bool> _keyState;
-        public int Id { get; private set; }
+        public int Id { get; }
+        public long Time { get; }
 
-        public KeyboardState(Dictionary<Keys, bool> keyState, int id)
+        public KeyboardState(Dictionary<Keys, bool> keyState, int id, long time)
         {
             _keyState = keyState;
             Id = id;
+            Time = time;
         }
 
         public bool this[Keys key]

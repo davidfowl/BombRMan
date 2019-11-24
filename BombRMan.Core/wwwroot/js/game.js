@@ -7,6 +7,8 @@
         inputId = 0,
         lastSentInputId = 0,
         lastProcessed = 0,
+        lastProcessedTime = 0,
+        lastProcessedRTT = 0,
         inputs = [];
 
 
@@ -119,7 +121,7 @@
             var player = this.players[this.playerIndex];
 
             if (!(empty(prevKeyState) && empty(keyState))) {
-                inputs.push({ keyState: $.extend({}, keyState), id: inputId++ });
+                inputs.push({ keyState: $.extend({}, keyState), id: inputId++, time: performance.now() });
             }
 
             // TODO: Handle connected state
@@ -188,6 +190,7 @@
                 if (player.index === that.playerIndex) {
                     sprite = that.ghost;
                     lastProcessed = player.lastProcessed;
+                    lastProcessedTime = player.lastProcessedTime;
                 }
                 else {
                     sprite = that.players[player.index];
@@ -237,6 +240,10 @@
             window.Game.Logger.log('last input = ' + (inputId - 1));
             window.Game.Logger.log('last sent input = ' + lastSentInputId);
             window.Game.Logger.log('last server processed input = ' + lastProcessed);
+            if (lastProcessed < lastSentInputId) {
+                lastProcessedRTT = performance.now() - lastProcessedTime;
+            }
+            window.Game.Logger.log('last server processed input time (ms) = ' + lastProcessedRTT);
         },
         movable: function (x, y) {
             if (y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

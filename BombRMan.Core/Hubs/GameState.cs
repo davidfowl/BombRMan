@@ -137,23 +137,27 @@ namespace BombRMan.Hubs
         public void RunGameLoop()
         {
             var frameTicks = (int)Math.Round(1000.0 / FPS);
-            var lastUpdate = 0;
+            var lastUpdate = Environment.TickCount;
 
             while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                int delta = (lastUpdate + frameTicks) - Environment.TickCount;
-                if (delta < 0)
+                int update = Environment.TickCount;
+                // Get difference
+                int delta = update - lastUpdate;
+                // Loop while difference is greater than a frame tick
+                while (delta > frameTicks)
                 {
-                    lastUpdate = Environment.TickCount;
+                    delta -= frameTicks;
 
                     Update();
 
                     Interlocked.Increment(ref _updatesPerSecond);
                 }
-                else
-                {
-                    Thread.Sleep(delta);
-                }
+                
+                // Remove the carry over delta from update and store as lastUpdate
+                lastUpdate = update - delta;
+
+                Thread.Sleep(1);
             }
         }
 

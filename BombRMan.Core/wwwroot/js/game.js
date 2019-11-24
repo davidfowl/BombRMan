@@ -9,6 +9,7 @@
         lastProcessed = 0,
         lastProcessedTime = 0,
         lastProcessedRTT = 0,
+        serverStats,
         inputs = [];
 
 
@@ -209,6 +210,10 @@
                 }
             });
 
+            this.gameServer.on('serverStats', stats => {
+                serverStats = stats;
+            });
+
             // $.connection.hub.logging = true;
             // $.connection.hub.url = 'http://localhost:8081/signalr';
             // $.connection.hub.start();
@@ -244,6 +249,7 @@
                 lastProcessedRTT = performance.now() - lastProcessedTime;
             }
             window.Game.Logger.log('last server processed input time (ms) = ' + lastProcessedRTT);
+            window.Game.Logger.log('serverStats:' + JSON.stringify(serverStats));
         },
         movable: function (x, y) {
             if (y >= 0 && y < MAP_HEIGHT && x >= 0 && x < MAP_WIDTH) {

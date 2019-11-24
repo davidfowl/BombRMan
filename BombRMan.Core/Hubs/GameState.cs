@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Threading;
@@ -36,6 +37,8 @@ namespace BombRMan.Hubs
         private readonly Map _map = new Map(_mapData, 15, 13, 32);
         private readonly IHubContext<GameServer> _hubContext;
         private readonly IHostApplicationLifetime _hostApplicationLifetime;
+        private int _updatesPerSecond;
+        private int _inputsPerSecond;
 
         public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime)
         {
@@ -66,6 +69,7 @@ namespace BombRMan.Hubs
                 });
             }
 
+            var timer = new Timer(OnTick, null, 1000, 1000);
         }
 
         public Map Map => _map;
@@ -123,6 +127,13 @@ namespace BombRMan.Hubs
             }
         }
 
+        private void OnTick(object state)
+        {
+            var updates = Interlocked.Exchange(ref _updatesPerSecond, 0);
+            var inputs = Interlocked.Exchange(ref _inputsPerSecond, 0);
+            _hubContext.Clients.All.SendAsync("serverStats", new { Updates = updates, ProcessedInputs = inputs });
+        }
+
         public void RunGameLoop()
         {
             var frameTicks = (int)Math.Round(1000.0 / FPS);
@@ -136,6 +147,8 @@ namespace BombRMan.Hubs
                     lastUpdate = Environment.TickCount;
 
                     Update();
+
+                    Interlocked.Increment(ref _updatesPerSecond);
                 }
                 else
                 {
@@ -153,6 +166,7 @@ namespace BombRMan.Hubs
                     pair.Value.Player.Update(input);
                     _ = _hubContext.Clients.All.SendAsync("updatePlayerState", pair.Value.Player);
                 }
+                Interlocked.Increment(ref _inputsPerSecond);
             }
         }
     }

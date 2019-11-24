@@ -141,7 +141,7 @@ namespace BombRMan.Hubs
             long lastFpsCheck = 0;
             var actualFps = 0;
 
-            while (true)
+            while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {
                 var frameMs = (int)Math.Round(1000.0 / FPS);
                 long delta = (lastMs + frameMs) - sw.ElapsedMilliseconds;

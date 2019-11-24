@@ -15,7 +15,7 @@ namespace BombRMan.Hubs
     {
         public const int POWER = 100;
         public const int DELTA = 10;
-        public const int FPS = 120;
+        public const int FPS = 60;
 
         static string _mapData = "222222222222222" +
                                  "200000000000002" +
@@ -136,29 +136,40 @@ namespace BombRMan.Hubs
 
         public void RunGameLoop()
         {
-            var frameTicks = (int)Math.Round(1000.0 / FPS);
-            var lastUpdate = 0;
+            long lastMs = 0;
+            var sw = Stopwatch.StartNew();
+            long lastFpsCheck = 0;
+            var actualFps = 0;
 
-            while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+            while (true)
             {
-                int delta = (lastUpdate + frameTicks) - Environment.TickCount;
-                if (delta < 0)
+                var frameMs = (int)Math.Round(1000.0 / FPS);
+                long delta = (lastMs + frameMs) - sw.ElapsedMilliseconds;
+
+                // Actual FPS check, update every second
+                if ((lastFpsCheck + 1000 - sw.ElapsedMilliseconds) <= 0)
                 {
-                    lastUpdate = Environment.TickCount;
+                    lastFpsCheck = sw.ElapsedMilliseconds;
+                    actualFps = 0;
+                }
 
+                if (delta <= 0)
+                {
+                    actualFps++;
                     Update();
-
-                    Interlocked.Increment(ref _updatesPerSecond);
+                    lastMs = sw.ElapsedMilliseconds;
                 }
                 else
                 {
-                    Thread.Sleep(delta);
+                    Thread.Yield();
                 }
             }
         }
 
         private void Update()
         {
+            Interlocked.Increment(ref _updatesPerSecond);
+
             foreach (var pair in _activePlayers)
             {
                 if (pair.Value.Inputs.TryDequeue(out KeyboardState input))

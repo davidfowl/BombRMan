@@ -91,9 +91,9 @@ public class Player
         var sourceLeft = effectiveX * map.TileSize;
         var sourceTop = effectiveY * map.TileSize;
         var sourceRect = new RectangleF(sourceLeft, sourceTop, map.TileSize, map.TileSize);
-        Span<Point> collisions = stackalloc Point[12];
+        Span<Point> collisions = stackalloc Point[6];
         var collisionsSize = 0;
-        Span<Point> possible = stackalloc Point[12];
+        Span<Point> possible = stackalloc Point[6];
         var possibleSize = 0;
 
         foreach (var t in _hitTargets[(DirectionX, DirectionY)])
@@ -127,7 +127,7 @@ public class Player
         }
         else
         {
-            Span<(int, int, Point)> candidates = stackalloc (int, int, Point)[12];
+            Span<(int, int, Point)> candidates = stackalloc (int, int, Point)[6];
             var candidatesSize = 0;
             (int, int, Point)? candidate = null;
             var p1 = new Point(actualX + DirectionX, actualY);

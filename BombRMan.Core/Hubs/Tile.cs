@@ -1,9 +1,8 @@
-﻿namespace BombRMan.Hubs
+﻿namespace BombRMan.Hubs;
+
+public enum Tile
 {
-    public enum Tile
-    {
-        GRASS = 0,
-        WALL = 2,
-        BRICK = 3,
-    }
+    GRASS = 0,
+    WALL = 2,
+    BRICK = 3,
 }

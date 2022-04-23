@@ -1,62 +1,62 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-namespace BombRMan.Hubs
+namespace BombRMan.Hubs;
+
+//[JsonConverter(typeof(KeyboardStateConverter))]
+public class KeyboardState
 {
-    public class KeyboardState
+    public Dictionary<Keys, bool> KeyState { get; }
+    public int Id { get; }
+    public double Time { get; }
+
+    public KeyboardState(Dictionary<Keys, bool> keyState, int id, double time)
     {
-        private readonly Dictionary<Keys, bool> _keyState;
-        public int Id { get; }
-        public long Time { get; }
+        KeyState = keyState;
+        Id = id;
+        Time = time;
+    }
 
-        public KeyboardState(Dictionary<Keys, bool> keyState, int id, long time)
+    public bool this[Keys key]
+    {
+        get
         {
-            _keyState = keyState;
-            Id = id;
-            Time = time;
+            return KeyState[key];
         }
+    }
 
-        public bool this[Keys key]
+    public bool Empty
+    {
+        get
         {
-            get
-            {
-                return _keyState[key];
-            }
+            return !this[Keys.A] &&
+                   !this[Keys.D] &&
+                   !this[Keys.DOWN] &&
+                   !this[Keys.LEFT] &&
+                   !this[Keys.RIGHT] &&
+                   !this[Keys.UP] &&
+                   !this[Keys.P];
         }
+    }
 
-        public bool Empty
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        foreach (var value in Enum.GetValues(typeof(Keys)))
         {
-            get
+            if (sb.Length > 0)
             {
-                return !this[Keys.A] &&
-                       !this[Keys.D] &&
-                       !this[Keys.DOWN] &&
-                       !this[Keys.LEFT] &&
-                       !this[Keys.RIGHT] &&
-                       !this[Keys.UP] &&
-                       !this[Keys.P];
-            }
-        }
-
-        public override string ToString()
-        {
-            var sb = new StringBuilder();
-            foreach (var value in Enum.GetValues(typeof(Keys)))
-            {
-                if (sb.Length > 0)
-                {
-                    sb.Append(", ");
-                }
-
-                sb.Append(Enum.GetName(typeof(Keys), value))
-                  .Append(" = ")
-                  .Append(this[(Keys)value]);
+                sb.Append(", ");
             }
 
-            sb.AppendLine();
-
-            return sb.ToString();
+            sb.Append(Enum.GetName(typeof(Keys), value))
+              .Append(" = ")
+              .Append(this[(Keys)value]);
         }
+
+        sb.AppendLine();
+
+        return sb.ToString();
     }
 }

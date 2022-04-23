@@ -4,10 +4,7 @@ namespace BombRMan.Hubs;
 
 public class Player
 {
-    private static readonly Point[] EastTargets = new Point[] { new(1, -1), new(1, 0), new(1, 1) };
-    private static readonly Point[] WestTargets = new Point[] { new(-1, -1), new(-1, 0), new(-1, 1) };
-    private static readonly Point[] NorthTargets = new Point[] { new(-1, -1), new(0, -1), new(1, -1) };
-    private static readonly Point[] SouthTargets = new Point[] { new(-1, 1), new(0, 1), new(1, 1) };
+    private static readonly Dictionary<(int, int), Point[]> _hitTargets = GetAllHitTargets();
 
     public int X { get; set; }
     public int Y { get; set; }
@@ -94,10 +91,12 @@ public class Player
         var sourceLeft = effectiveX * map.TileSize;
         var sourceTop = effectiveY * map.TileSize;
         var sourceRect = new RectangleF(sourceLeft, sourceTop, map.TileSize, map.TileSize);
-        var collisions = new List<Point>();
-        var possible = new List<Point>();
+        Span<Point> collisions = stackalloc Point[12];
+        var collisionsSize = 0;
+        Span<Point> possible = stackalloc Point[12];
+        var possibleSize = 0;
 
-        foreach (var t in GetHitTargets())
+        foreach (var t in _hitTargets[(DirectionX, DirectionY)])
         {
             int targetX = actualX + t.X,
                 targetY = actualY + t.Y;
@@ -108,15 +107,15 @@ public class Player
 
             if (!movable && intersects)
             {
-                collisions.Add(new Point(targetX, targetY));
+                collisions[collisionsSize++] = new(targetX, targetY);
             }
             else
             {
-                possible.Add(new Point(targetX, targetY));
+                possible[possibleSize++] = new(targetX, targetY);
             }
         }
 
-        if (collisions.Count == 0)
+        if (collisionsSize == 0)
         {
             SetDirection(DirectionX, DirectionY);
 
@@ -128,7 +127,8 @@ public class Player
         }
         else
         {
-            var candidates = new List<(int, int, Point)>();
+            Span<(int, int, Point)> candidates = stackalloc (int, int, Point)[12];
+            var candidatesSize = 0;
             (int, int, Point)? candidate = null;
             var p1 = new Point(actualX + DirectionX, actualY);
             var p2 = new Point(actualX, actualY + DirectionY);
@@ -136,27 +136,28 @@ public class Player
             {
                 if (p1.Equals(nextMove))
                 {
-                    candidates.Add((DirectionX, 0, p1));
+                    candidates[candidatesSize++] = (DirectionX, 0, p1);
                 }
 
                 if (p2.Equals(nextMove))
                 {
-                    candidates.Add((0, DirectionY, p2));
+                    candidates[candidatesSize++] = (0, DirectionY, p2);
                 }
             }
 
-            if (candidates.Count == 1)
+            if (candidatesSize == 1)
             {
                 candidate = candidates[0];
             }
-            else if (candidates.Count == 2)
+            else if (candidatesSize == 2)
             {
                 int minDistance = int.MaxValue;
-                for (int i = 0; i < candidates.Count; ++i)
+                for (int i = 0; i < candidatesSize; ++i)
                 {
                     var targetCandidate = candidates[i];
-                    int xs = (ExactX - candidates[i].Item3.X * GameState.POWER);
-                    int ys = (ExactY - candidates[i].Item3.Y * GameState.POWER);
+                    var (_, _, point) = targetCandidate;
+                    int xs = (ExactX - point.X * GameState.POWER);
+                    int ys = (ExactY - point.Y * GameState.POWER);
                     int distance = xs * xs + ys * ys;
 
                     if (distance < minDistance)
@@ -257,36 +258,39 @@ public class Player
         }
     }
 
-    private IEnumerable<Point> GetHitTargets()
+    private static Dictionary<(int, int), Point[]> GetAllHitTargets()
     {
-        return GetXHitTargets().Concat(GetYHitTargets());
-    }
+        var eastTargets = new Point[] { new(1, -1), new(1, 0), new(1, 1) };
+        var westTargets = new Point[] { new(-1, -1), new(-1, 0), new(-1, 1) };
+        var northTargets = new Point[] { new(-1, -1), new(0, -1), new(1, -1) };
+        var southTargets = new Point[] { new(-1, 1), new(0, 1), new(1, 1) };
 
-    private Point[] GetXHitTargets()
-    {
-        if (DirectionX == 1)
+        Point[] GetXHitTargets(int directionX)
         {
-            return EastTargets;
-        }
-        else if (DirectionX == -1)
-        {
-            return WestTargets;
-        }
-
-        return Array.Empty<Point>();
-    }
-
-    private Point[] GetYHitTargets()
-    {
-        if (DirectionY == -1)
-        {
-            return NorthTargets;
-        }
-        else if (DirectionY == 1)
-        {
-            return SouthTargets;
+            return directionX switch
+            {
+                1 => eastTargets,
+                -1 => westTargets,
+                _ => Array.Empty<Point>()
+            };
         }
 
-        return Array.Empty<Point>();
+        Point[] GetYHitTargets(int directionY)
+        {
+            return directionY switch
+            {
+                1 => southTargets,
+                -1 => northTargets,
+                _ => Array.Empty<Point>()
+            };
+        }
+
+        var possibleValues = new[] { -1, 0, 1 };
+
+        return (from x in possibleValues
+                from y in possibleValues
+                let points = GetXHitTargets(x).Concat(GetYHitTargets(y)).ToArray()
+                select (x, y, points))
+                .ToDictionary(k => (k.x, k.y), p => p.points);
     }
 }

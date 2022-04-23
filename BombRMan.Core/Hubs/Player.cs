@@ -4,10 +4,10 @@ namespace BombRMan.Hubs;
 
 public class Player
 {
-    private static readonly Point[] EastTargets = new Point[] { new Point(1, -1), new Point(1, 0), new Point(1, 1) };
-    private static readonly Point[] WestTargets = new Point[] { new Point(-1, -1), new Point(-1, 0), new Point(-1, 1) };
-    private static readonly Point[] NorthTargets = new Point[] { new Point(-1, -1), new Point(0, -1), new Point(1, -1) };
-    private static readonly Point[] SouthTargets = new Point[] { new Point(-1, 1), new Point(0, 1), new Point(1, 1) };
+    private static readonly Point[] EastTargets = new Point[] { new(1, -1), new(1, 0), new(1, 1) };
+    private static readonly Point[] WestTargets = new Point[] { new(-1, -1), new(-1, 0), new(-1, 1) };
+    private static readonly Point[] NorthTargets = new Point[] { new(-1, -1), new(0, -1), new(1, -1) };
+    private static readonly Point[] SouthTargets = new Point[] { new(-1, 1), new(0, 1), new(1, 1) };
 
     public int X { get; set; }
     public int Y { get; set; }
@@ -91,14 +91,13 @@ public class Player
 
         var actualX = (int)Math.Floor((float)(x + (GameState.POWER / 2)) / GameState.POWER);
         var actualY = (int)Math.Floor((float)(y + (GameState.POWER / 2)) / GameState.POWER);
-        var targets = GetHitTargets();
         var sourceLeft = effectiveX * map.TileSize;
         var sourceTop = effectiveY * map.TileSize;
         var sourceRect = new RectangleF(sourceLeft, sourceTop, map.TileSize, map.TileSize);
         var collisions = new List<Point>();
         var possible = new List<Point>();
 
-        foreach (var t in targets)
+        foreach (var t in GetHitTargets())
         {
             int targetX = actualX + t.X,
                 targetY = actualY + t.Y;
@@ -129,20 +128,20 @@ public class Player
         }
         else
         {
-            var candidates = new List<Tuple<int, int, Point>>();
-            Tuple<int, int, Point> candidate = null;
+            var candidates = new List<(int, int, Point)>();
+            (int, int, Point)? candidate = null;
             var p1 = new Point(actualX + DirectionX, actualY);
             var p2 = new Point(actualX, actualY + DirectionY);
             foreach (var nextMove in possible)
             {
                 if (p1.Equals(nextMove))
                 {
-                    candidates.Add(Tuple.Create(DirectionX, 0, p1));
+                    candidates.Add((DirectionX, 0, p1));
                 }
 
                 if (p2.Equals(nextMove))
                 {
-                    candidates.Add(Tuple.Create(0, DirectionY, p2));
+                    candidates.Add((0, DirectionY, p2));
                 }
             }
 
@@ -152,7 +151,7 @@ public class Player
             }
             else if (candidates.Count == 2)
             {
-                int minDistance = Int32.MaxValue;
+                int minDistance = int.MaxValue;
                 for (int i = 0; i < candidates.Count; ++i)
                 {
                     var targetCandidate = candidates[i];
@@ -168,15 +167,15 @@ public class Player
                 }
             }
 
-            if (candidate != null)
+            if (candidate is { } c)
             {
-                var diffX = candidate.Item3.X * GameState.POWER - ExactX;
-                var diffY = candidate.Item3.Y * GameState.POWER - ExactY;
+                var (cx, cy, point) = c;
+                var diffX = point.X * GameState.POWER - ExactX;
+                var diffY = point.Y * GameState.POWER - ExactY;
                 var absX = Math.Abs(diffX);
                 var absY = Math.Abs(diffY);
-                int effectiveDirectionX = 0;
-                int effectiveDirectionY = 0;
 
+                int effectiveDirectionX;
                 if (absX == 100)
                 {
                     effectiveDirectionX = 0;
@@ -186,6 +185,7 @@ public class Player
                     effectiveDirectionX = Math.Sign(diffX);
                 }
 
+                int effectiveDirectionY;
                 if (absY == 100)
                 {
                     effectiveDirectionY = 0;
@@ -197,8 +197,8 @@ public class Player
 
                 if (effectiveDirectionX == 0 && effectiveDirectionY == 0)
                 {
-                    effectiveDirectionX = candidate.Item1;
-                    effectiveDirectionY = candidate.Item2;
+                    effectiveDirectionX = cx;
+                    effectiveDirectionY = cy;
                 }
 
                 SetDirection(effectiveDirectionX, effectiveDirectionY);
@@ -211,8 +211,8 @@ public class Player
             }
             else
             {
-                var diffY = (collisions[0].Y * GameState.POWER - ExactY);
-                var diffX = (collisions[0].X * GameState.POWER - ExactX);
+                var diffY = collisions[0].Y * GameState.POWER - ExactY;
+                var diffX = collisions[0].X * GameState.POWER - ExactX;
                 var absX = Math.Abs(diffX);
                 var absY = Math.Abs(diffY);
                 int effectiveDirectionX = 0;
@@ -257,9 +257,9 @@ public class Player
         }
     }
 
-    private Point[] GetHitTargets()
+    private IEnumerable<Point> GetHitTargets()
     {
-        return GetXHitTargets().Concat(GetYHitTargets()).ToArray();
+        return GetXHitTargets().Concat(GetYHitTargets());
     }
 
     private Point[] GetXHitTargets()
@@ -273,7 +273,7 @@ public class Player
             return WestTargets;
         }
 
-        return new Point[0];
+        return Array.Empty<Point>();
     }
 
     private Point[] GetYHitTargets()
@@ -287,6 +287,6 @@ public class Player
             return SouthTargets;
         }
 
-        return new Point[0];
+        return Array.Empty<Point>();
     }
 }

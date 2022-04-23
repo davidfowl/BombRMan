@@ -38,8 +38,11 @@ public class GameState
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
 
-        var gameLoopThread = new Thread(_ => RunGameLoop());
-        gameLoopThread.IsBackground = true;
+        var gameLoopThread = new Thread(_ => RunGameLoop())
+        {
+            IsBackground = true
+        };
+
         gameLoopThread.Start();
 
         _initialPositions = new Point[4];
@@ -62,7 +65,19 @@ public class GameState
             });
         }
 
-        var timer = new Timer(OnTick, null, 1000, 1000);
+        Task.Run(ServerStatsTimer);
+    }
+
+    private async Task ServerStatsTimer()
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+
+        while (await timer.WaitForNextTickAsync())
+        {
+            var updates = Interlocked.Exchange(ref _updatesPerSecond, 0);
+            var inputs = Interlocked.Exchange(ref _inputsPerSecond, 0);
+            await _hubContext.Clients.All.SendAsync("serverStats", new { Updates = updates, ProcessedInputs = inputs });
+        }
     }
 
     public Map Map => _map;
@@ -118,13 +133,6 @@ public class GameState
                 state.Inputs.Enqueue(input);
             }
         }
-    }
-
-    private void OnTick(object state)
-    {
-        var updates = Interlocked.Exchange(ref _updatesPerSecond, 0);
-        var inputs = Interlocked.Exchange(ref _inputsPerSecond, 0);
-        _hubContext.Clients.All.SendAsync("serverStats", new { Updates = updates, ProcessedInputs = inputs });
     }
 
     public void RunGameLoop()

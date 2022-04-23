@@ -1,10 +1,7 @@
 ﻿using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace BombRMan.Hubs;
 
-//[JsonConverter(typeof(KeyboardStateConverter))]
 public class KeyboardState
 {
     public Dictionary<Keys, bool> KeyState { get; }

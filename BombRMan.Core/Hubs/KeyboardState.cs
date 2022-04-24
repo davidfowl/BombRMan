@@ -71,13 +71,13 @@ class KeyboardStateConverter : JsonConverter<KeyboardState[]>
 
     public override KeyboardState[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var keyboardState = _pool.Get();
-
         var keyboardStates = ArrayPool<KeyboardState>.Shared.Rent(1);
         var count = 0;
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
         {
+            var keyboardState = _pool.Get();
+
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
                 if (reader.ValueTextEquals(IdPropertyName.EncodedUtf8Bytes))

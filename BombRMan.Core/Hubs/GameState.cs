@@ -1,6 +1,9 @@
-﻿using System.Collections.Concurrent;
+﻿using System.Buffers;
+using System.Collections.Concurrent;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.ObjectPool;
 
 namespace BombRMan.Hubs;
 
@@ -27,16 +30,18 @@ public class GameState
     private readonly Point[] _initialPositions;
     private readonly ConcurrentStack<Player> _availablePlayers = new();
     private readonly ConcurrentDictionary<string, PlayerState> _activePlayers = new();
+    private readonly ObjectPool<KeyboardState> _pool;
     private readonly Map _map = new(_mapData, 15, 13, 32);
     private readonly IHubContext<GameServer> _hubContext;
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private int _updatesPerSecond;
     private int _inputsPerSecond;
 
-    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime)
+    public GameState(IHubContext<GameServer> hubContext, ObjectPool<KeyboardState> pool, IHostApplicationLifetime hostApplicationLifetime)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
+        _pool = pool;
 
         var gameLoopThread = new Thread(_ => RunGameLoop())
         {
@@ -125,13 +130,18 @@ public class GameState
 
     public void SendKeys(string playerId, KeyboardState[] inputs)
     {
-        PlayerState state;
-        if (_activePlayers.TryGetValue(playerId, out state))
+        if (_activePlayers.TryGetValue(playerId, out var state))
         {
             foreach (var input in inputs)
             {
+                if (input is null) break;
+
                 state.Inputs.Enqueue(input);
             }
+
+            // Return the batch to the pool, clear the array so we can use null to figure out what
+            // the last entry is without storing a struct on the heap
+            ArrayPool<KeyboardState>.Shared.Return(inputs, clearArray: true);
         }
     }
 
@@ -169,6 +179,7 @@ public class GameState
             if (pair.Value.Inputs.TryDequeue(out KeyboardState input))
             {
                 pair.Value.Player.Update(input);
+                _pool.Return(input);
                 _ = _hubContext.Clients.All.SendAsync("updatePlayerState", pair.Value.Player);
             }
             Interlocked.Increment(ref _inputsPerSecond);

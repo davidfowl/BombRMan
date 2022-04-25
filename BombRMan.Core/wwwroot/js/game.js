@@ -2,8 +2,8 @@
     var MAP_WIDTH = 15,
         MAP_HEIGHT = 13,
         TILE_SIZE = 32,
-        keyState = {},
-        prevKeyState = {},
+        keyState = new Array(8).fill(0),
+        prevKeyState = new Array(8).fill(0),
         inputId = 0,
         lastSentInputId = 0,
         lastProcessed = 0,
@@ -12,10 +12,42 @@
         serverStats,
         inputs = [];
 
+    function getKeyState(key) {
+        var index = key >> 5;
+        var bit = 1 << (key & 0x1f);
+        return (keyState[index] & bit) == bit;
+    }
+
+    function getPrevKeyState(key) {
+        var index = key >> 5;
+        var bit = 1 << (key & 0x1f);
+        return (prevKeyState[index] & bit) == bit;
+    }
+
+    function setKeyState(key, flag) {
+        var index = key >> 5;
+        var bit = 1 << (key & 0x1f);
+        if (flag === true) {
+            keyState[index] |= bit;
+        } else {
+            keyState[index] &= ~bit;
+        }
+    }
+
+    function setPrevKeyState(key, flag) {
+        var index = key >> 5;
+        var bit = 1 << (key & 0x1f);
+        if (flag === true) {
+            prevKeyState[index] |= bit;
+        } else {
+            prevKeyState[index] &= ~bit;
+        }
+    }
 
     function empty(state) {
-        for (var key in window.Game.Keys) {
-            if (state[window.Game.Keys[key]] === true) {
+        // Everything false means the values are all 0
+        for (var b of state) {
+            if (b !== 0) {
                 return false;
             }
         }
@@ -34,28 +66,28 @@
         this.sprites = [];
         this.inputManager = {
             isKeyDown: function (key) {
-                return keyState[key] === true;
+                return getKeyState(key) === true;
             },
             isKeyUp: function (key) {
-                return keyState[key] === false;
+                return getKeyState(key) === false;
             },
             isHoldingKey: function (key) {
-                return prevKeyState[key] === true &&
-                    keyState[key] === true;
+                return getPrevKeyState(key) === true &&
+                    getKeyState(key) === true;
             },
             isKeyPress: function (key) {
-                return prevKeyState[key] === false &&
-                    keyState[key] === true;
+                return getPrevKeyState(key) === false &&
+                    getKeyState(key) === true;
             },
             isKeyRelease: function (key) {
-                return prevKeyState[key] === true &&
-                    keyState[key] === false;
+                return getPrevKeyState(key) === true &&
+                    getKeyState(key) === false;
             }
         };
 
-        for (var key in window.Game.Keys) {
-            keyState[window.Game.Keys[key]] = false;
-            prevKeyState[window.Game.Keys[key]] = false;
+        for (const keyCode of Object.values(window.Game.Keys)) {
+            setKeyState(keyCode, false);
+            setPrevKeyState(keyCode, false);
         }
 
         this.types = {
@@ -67,10 +99,10 @@
 
     window.Game.Engine.prototype = {
         onKeydown: function (e) {
-            keyState[e.keyCode] = true;
+            setKeyState(e.keyCode, true);
         },
         onKeyup: function (e) {
-            keyState[e.keyCode] = false;
+            setKeyState(e.keyCode, false);
         },
         onExplosionEnd: function (x, y) {
             var randomPower = Math.floor(Math.random() * window.Game.Powerups.EXPLOSION) + window.Game.Powerups.SPEED;
@@ -119,10 +151,9 @@
             }
         },
         sendKeyState: function () {
-            var player = this.players[this.playerIndex];
 
             if (!(empty(prevKeyState) && empty(keyState))) {
-                inputs.push({ keyState: $.extend({}, keyState), id: inputId++, time: performance.now() });
+                inputs.push({ keyState: keyState, id: inputId++, time: performance.now() });
             }
 
             var buffer = inputs.splice(0, inputs.length);
@@ -225,9 +256,7 @@
                 }
             }
 
-            for (var key in keyState) {
-                prevKeyState[key] = keyState[key];
-            }
+            prevKeyState = [...keyState];
 
             window.Game.Logger.log('last input = ' + (inputId - 1));
             window.Game.Logger.log('last sent input = ' + lastSentInputId);

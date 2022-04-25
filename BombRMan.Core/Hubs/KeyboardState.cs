@@ -13,6 +13,11 @@ public class KeyboardState
     public int Id { get; set; }
     public double Time { get; set; }
 
+    public void SetKeyState(int index, uint value)
+    {
+        _keyState[index] = value;
+    }
+
     public bool this[Keys key]
     {
         get
@@ -113,22 +118,18 @@ class KeyboardStateConverter : JsonConverter<KeyboardState[]>
                 else if (reader.ValueTextEquals(KeyStatePropertyName.EncodedUtf8Bytes))
                 {
                     reader.Read();
-                    if (reader.TokenType != JsonTokenType.StartObject)
+                    if (reader.TokenType != JsonTokenType.StartArray)
                     {
                         throw new InvalidDataException();
                     }
 
-                    // This is a flat object 
-                    //  { "keyCode": true/false }
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                    // This is an array of flags
+                    var index = 0;
+                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     {
-                        // Property name
-                        _ = Utf8Parser.TryParse(reader.ValueSpan, out int keyCode, out _);
+                        _ = Utf8Parser.TryParse(reader.ValueSpan, out uint flags, out _);
 
-                        reader.Read();
-                        // Property value
-
-                        keyboardState[(Keys)keyCode] = reader.GetBoolean();
+                        keyboardState.SetKeyState(index++, flags);
                     }
                 }
             }

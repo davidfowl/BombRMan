@@ -1,7 +1,7 @@
 ﻿using System.Buffers;
 using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.Drawing;
-using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.ObjectPool;
 
@@ -29,7 +29,7 @@ public class GameState
 
     private readonly Point[] _initialPositions;
     private readonly ConcurrentStack<Player> _availablePlayers = new();
-    private readonly ConcurrentDictionary<string, PlayerState> _activePlayers = new();
+    private readonly PlayerList _activePlayers = new();
     private readonly ObjectPool<KeyboardState> _pool;
     private readonly Map _map = new(_mapData, 15, 13, 32);
     private readonly IHubContext<GameServer> _hubContext;
@@ -87,14 +87,15 @@ public class GameState
 
     public Map Map => _map;
 
-    public IEnumerable<Player> ActivePlayers => _activePlayers.Select(a => a.Value.Player);
+    public ImmutableArray<Player> ActivePlayers => _activePlayers.Players;
 
     public bool TryAddPlayer(string playerId, out Player player)
     {
         if (_availablePlayers.TryPop(out player))
         {
-            _activePlayers.TryAdd(playerId, new PlayerState
+            _activePlayers.Add(new PlayerState
             {
+                PlayerId = playerId,
                 Inputs = new ConcurrentQueue<KeyboardState>(),
                 Player = player,
             });
@@ -130,7 +131,7 @@ public class GameState
 
     public void SendKeys(string playerId, KeyboardState[] inputs)
     {
-        if (_activePlayers.TryGetValue(playerId, out var state))
+        if (_activePlayers.TryGet(playerId, out var state))
         {
             foreach (var input in inputs)
             {
@@ -138,11 +139,11 @@ public class GameState
 
                 state.Inputs.Enqueue(input);
             }
-
-            // Return the batch to the pool, clear the array so we can use null to figure out what
-            // the last entry is without storing a struct on the heap
-            ArrayPool<KeyboardState>.Shared.Return(inputs, clearArray: true);
         }
+
+        // Return the batch to the pool, clear the array so we can use null to figure out what
+        // the last entry is without storing a struct on the heap
+        ArrayPool<KeyboardState>.Shared.Return(inputs, clearArray: true);
     }
 
     public void RunGameLoop()
@@ -174,15 +175,80 @@ public class GameState
     {
         Interlocked.Increment(ref _updatesPerSecond);
 
-        foreach (var pair in _activePlayers)
+        foreach (var state in _activePlayers.PlayerStates)
         {
-            if (pair.Value.Inputs.TryDequeue(out KeyboardState input))
+            if (state.Inputs.TryDequeue(out KeyboardState input))
             {
-                pair.Value.Player.Update(input);
+                state.Player.Update(input);
                 _pool.Return(input);
-                _ = _hubContext.Clients.All.SendAsync("updatePlayerState", pair.Value.Player);
+                _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
             }
             Interlocked.Increment(ref _inputsPerSecond);
+        }
+    }
+
+    /// <summary>
+    /// This data structure tracks the list of active players. It optimizes for enumerating over all players quickly
+    /// assuming the list of players rarely changes.
+    /// </summary>
+    class PlayerList
+    {
+        private readonly object _obj = new();
+
+        private ImmutableArray<PlayerState> _playersStates = ImmutableArray<PlayerState>.Empty;
+        private ImmutableArray<Player> _players = ImmutableArray<Player>.Empty;
+
+        public ImmutableArray<Player> Players => _players;
+
+        public ImmutableArray<PlayerState> PlayerStates => _playersStates;
+
+        public void Add(PlayerState state)
+        {
+            lock (_obj)
+            {
+                _playersStates = _playersStates.Add(state);
+                _players = _players.Add(state.Player);
+            }
+        }
+
+        public bool TryRemove(string playerId, out PlayerState state)
+        {
+            lock (_obj)
+            {
+                var current = _playersStates;
+
+                foreach (var item in current)
+                {
+                    if (item.PlayerId == playerId)
+                    {
+                        _playersStates = _playersStates.Remove(item);
+                        _players = _players.Remove(item.Player);
+
+                        state = item;
+
+                        return true;
+                    }
+                }
+
+                state = null;
+                return false;
+            }
+        }
+
+        public bool TryGet(string playerId, out PlayerState state)
+        {
+            // We don't need to lock here since we have a snapshot of the array
+            foreach (var item in _playersStates)
+            {
+                if (item.PlayerId == playerId)
+                {
+                    state = item;
+                    return true;
+                }
+            }
+
+            state = null;
+            return false;
         }
     }
 }

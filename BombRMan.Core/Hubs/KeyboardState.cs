@@ -9,7 +9,7 @@ namespace BombRMan.Hubs;
 
 public class KeyboardState
 {
-    public bool[] KeyState { get; set; } = new bool[255];
+    private readonly int[] _keyState = new int[32];
     public int Id { get; set; }
     public double Time { get; set; }
 
@@ -17,7 +17,22 @@ public class KeyboardState
     {
         get
         {
-            return KeyState[(int)key];
+            var index = (int)key >> 5;
+            var bit = 1 << ((int)key & 0x1f);
+            return (_keyState[index] & bit) == bit;
+        }
+        set
+        {
+            var index = (int)key >> 5;
+            var bit = 1 << ((int)key & 0x1f);
+            if (value)
+            {
+                _keyState[index] |= bit;
+            }
+            else
+            {
+                _keyState[index] &= ~bit;
+            }
         }
     }
 
@@ -53,6 +68,11 @@ public class KeyboardState
         sb.AppendLine();
 
         return sb.ToString();
+    }
+
+    public void Reset()
+    {
+        _keyState.AsSpan().Clear();
     }
 }
 
@@ -108,7 +128,7 @@ class KeyboardStateConverter : JsonConverter<KeyboardState[]>
                         reader.Read();
                         // Property value
 
-                        keyboardState.KeyState[keyCode] = reader.GetBoolean();
+                        keyboardState[(Keys)keyCode] = reader.GetBoolean();
                     }
                 }
             }
@@ -148,7 +168,7 @@ class KeyboardStatePolicyProvider : IPooledObjectPolicy<KeyboardState>
 
     public bool Return(KeyboardState obj)
     {
-        obj.KeyState.AsSpan().Clear();
+        obj.Reset();
 
         return true;
     }

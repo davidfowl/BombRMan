@@ -77,11 +77,18 @@ public class GameState
     {
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
 
+        // Reuse this for stats
+        var serverStats = new ServerStats();
+
         while (await timer.WaitForNextTickAsync())
         {
             var updates = Interlocked.Exchange(ref _updatesPerSecond, 0);
             var inputs = Interlocked.Exchange(ref _inputsPerSecond, 0);
-            await _hubContext.Clients.All.SendAsync("serverStats", new { Updates = updates, ProcessedInputs = inputs });
+
+            serverStats.Updates = updates;
+            serverStats.ProcessedInputs = inputs;
+
+            await _hubContext.Clients.All.SendAsync("serverStats", serverStats);
         }
     }
 
@@ -185,6 +192,11 @@ public class GameState
             }
             Interlocked.Increment(ref _inputsPerSecond);
         }
+    }
+    class ServerStats
+    {
+        public int Updates { get; set; }
+        public int ProcessedInputs { get; set; }
     }
 
     /// <summary>

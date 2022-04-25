@@ -9,7 +9,7 @@ namespace BombRMan.Hubs;
 
 public class KeyboardState
 {
-    private readonly int[] _keyState = new int[8];
+    private readonly uint[] _keyState = new uint[8];
     public int Id { get; set; }
     public double Time { get; set; }
 
@@ -18,13 +18,13 @@ public class KeyboardState
         get
         {
             var index = (int)key >> 5;
-            var bit = 1 << ((int)key & 0x1f);
+            var bit = (uint)(1 << ((int)key & 0x1f));
             return (_keyState[index] & bit) == bit;
         }
         set
         {
             var index = (int)key >> 5;
-            var bit = 1 << ((int)key & 0x1f);
+            var bit = (uint)(1 << ((int)key & 0x1f));
             if (value)
             {
                 _keyState[index] |= bit;

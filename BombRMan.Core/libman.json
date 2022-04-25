@@ -3,8 +3,8 @@
   "defaultProvider": "jsdelivr",
   "libraries": [
     {
-      "library": "@microsoft/signalr@3.0.1",
-      "destination": "wwwroot/Scripts/@microsoft/signalr/"
+      "library": "@microsoft/signalr@6.0.4",
+      "destination": "wwwroot/js/@microsoft/signalr/"
     }
   ]
 }

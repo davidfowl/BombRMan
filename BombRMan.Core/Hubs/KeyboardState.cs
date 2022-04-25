@@ -9,7 +9,7 @@ namespace BombRMan.Hubs;
 
 public class KeyboardState
 {
-    private readonly int[] _keyState = new int[32];
+    private readonly int[] _keyState = new int[8];
     public int Id { get; set; }
     public double Time { get; set; }
 

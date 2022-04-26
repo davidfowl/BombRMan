@@ -26,19 +26,6 @@ public class KeyboardState
             var bit = (uint)(1 << ((int)key & 0x1f));
             return (_keyState[index] & bit) == bit;
         }
-        set
-        {
-            var index = (int)key >> 5;
-            var bit = (uint)(1 << ((int)key & 0x1f));
-            if (value)
-            {
-                _keyState[index] |= bit;
-            }
-            else
-            {
-                _keyState[index] &= ~bit;
-            }
-        }
     }
 
     public bool Empty

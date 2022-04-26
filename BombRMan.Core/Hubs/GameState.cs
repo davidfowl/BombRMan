@@ -185,7 +185,7 @@ public class GameState
             {
                 state.Player.Update(input);
 
-                ArrayPool<uint>.Shared.Return(input.KeyState);
+                input.Dispose();
 
                 _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
             }

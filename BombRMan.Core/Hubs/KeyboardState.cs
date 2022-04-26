@@ -1,8 +1,9 @@
-﻿using System.Text;
+﻿using System.Buffers;
+using System.Text;
 
 namespace BombRMan.Hubs;
 
-public readonly struct KeyboardState
+public readonly struct KeyboardState : IDisposable
 {
     public uint[] KeyState { get; }
     public int Id { get; }
@@ -43,5 +44,10 @@ public readonly struct KeyboardState
         sb.AppendLine();
 
         return sb.ToString();
+    }
+
+    public void Dispose()
+    {
+        ArrayPool<uint>.Shared.Return(KeyState);
     }
 }

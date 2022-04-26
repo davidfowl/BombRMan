@@ -75,6 +75,6 @@ internal class KeyboardStateConverter : JsonConverter<KeyboardState[]>
 
     public override void Write(Utf8JsonWriter writer, KeyboardState[] value, JsonSerializerOptions options)
     {
-        JsonSerializer.Serialize(writer, value, options);
+        throw new NotSupportedException();
     }
 }

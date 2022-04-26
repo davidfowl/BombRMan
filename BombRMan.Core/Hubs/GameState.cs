@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Drawing;
 using Microsoft.AspNetCore.SignalR;
-using Microsoft.Extensions.ObjectPool;
 
 namespace BombRMan.Hubs;
 
@@ -30,18 +29,16 @@ public class GameState
     private readonly Point[] _initialPositions;
     private readonly ConcurrentStack<Player> _availablePlayers = new();
     private readonly PlayerList _activePlayers = new();
-    private readonly ObjectPool<KeyboardState> _pool;
     private readonly Map _map = new(_mapData, 15, 13, 32);
     private readonly IHubContext<GameServer> _hubContext;
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
     private int _updatesPerSecond;
     private int _inputsPerSecond;
 
-    public GameState(IHubContext<GameServer> hubContext, ObjectPool<KeyboardState> pool, IHostApplicationLifetime hostApplicationLifetime)
+    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
-        _pool = pool;
 
         var gameLoopThread = new Thread(_ => RunGameLoop())
         {
@@ -142,7 +139,7 @@ public class GameState
         {
             foreach (var input in inputs)
             {
-                if (input is null) break;
+                if (input.KeyState is null) break;
 
                 state.Inputs.Enqueue(input);
             }
@@ -184,10 +181,12 @@ public class GameState
 
         foreach (var state in _activePlayers.PlayerStates)
         {
-            if (state.Inputs.TryDequeue(out KeyboardState input))
+            if (state.Inputs.TryDequeue(out var input))
             {
                 state.Player.Update(input);
-                _pool.Return(input);
+
+                ArrayPool<uint>.Shared.Return(input.KeyState);
+
                 _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
             }
             Interlocked.Increment(ref _inputsPerSecond);

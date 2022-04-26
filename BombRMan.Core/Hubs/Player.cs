@@ -23,7 +23,7 @@ public class Player
 
     public double LastProcessedTime { get; set; }
 
-    public void Update(KeyboardState input)
+    public void Update(in KeyboardState input)
     {
         LastProcessed = input.Id;
         LastProcessedTime = input.Time;

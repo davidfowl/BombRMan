@@ -1,21 +1,18 @@
-﻿using System.Buffers;
-using System.Buffers.Text;
-using System.Text;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Microsoft.Extensions.ObjectPool;
+﻿using System.Text;
 
 namespace BombRMan.Hubs;
 
-public class KeyboardState
+public readonly struct KeyboardState
 {
-    private readonly uint[] _keyState = new uint[8];
-    public int Id { get; set; }
-    public double Time { get; set; }
+    public uint[] KeyState { get; }
+    public int Id { get; }
+    public double Time { get; }
 
-    public void SetKeyState(int index, uint value)
+    public KeyboardState(uint[] keyState, int id, double time)
     {
-        _keyState[index] = value;
+        KeyState = keyState;
+        Id = id;
+        Time = time;
     }
 
     public bool this[Keys key]
@@ -24,21 +21,7 @@ public class KeyboardState
         {
             var index = (int)key >> 5;
             var bit = (uint)(1 << ((int)key & 0x1f));
-            return (_keyState[index] & bit) == bit;
-        }
-    }
-
-    public bool Empty
-    {
-        get
-        {
-            return !this[Keys.A] &&
-                   !this[Keys.D] &&
-                   !this[Keys.DOWN] &&
-                   !this[Keys.LEFT] &&
-                   !this[Keys.RIGHT] &&
-                   !this[Keys.UP] &&
-                   !this[Keys.P];
+            return (KeyState[index] & bit) == bit;
         }
     }
 
@@ -60,104 +43,5 @@ public class KeyboardState
         sb.AppendLine();
 
         return sb.ToString();
-    }
-
-    public void Reset()
-    {
-        _keyState.AsSpan().Clear();
-    }
-}
-
-class KeyboardStateConverter : JsonConverter<KeyboardState[]>
-{
-    private static readonly JsonEncodedText IdPropertyName = JsonEncodedText.Encode("id");
-    private static readonly JsonEncodedText TimePropertyName = JsonEncodedText.Encode("time");
-    private static readonly JsonEncodedText KeyStatePropertyName = JsonEncodedText.Encode("keyState");
-
-    private readonly ObjectPool<KeyboardState> _pool;
-
-    public KeyboardStateConverter(ObjectPool<KeyboardState> pool)
-    {
-        _pool = pool;
-    }
-
-    public override KeyboardState[] Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
-    {
-        var keyboardStates = ArrayPool<KeyboardState>.Shared.Rent(1);
-        var count = 0;
-
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-        {
-            var keyboardState = _pool.Get();
-
-            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-            {
-                if (reader.ValueTextEquals(IdPropertyName.EncodedUtf8Bytes))
-                {
-                    reader.Read();
-                    keyboardState.Id = reader.GetInt32();
-                }
-                else if (reader.ValueTextEquals(TimePropertyName.EncodedUtf8Bytes))
-                {
-                    reader.Read();
-                    keyboardState.Time = reader.GetDouble();
-                }
-                else if (reader.ValueTextEquals(KeyStatePropertyName.EncodedUtf8Bytes))
-                {
-                    reader.Read();
-                    if (reader.TokenType != JsonTokenType.StartArray)
-                    {
-                        throw new InvalidDataException();
-                    }
-
-                    // This is an array of flags
-                    var index = 0;
-                    while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-                    {
-                        _ = Utf8Parser.TryParse(reader.ValueSpan, out uint flags, out _);
-
-                        keyboardState.SetKeyState(index++, flags);
-                    }
-                }
-            }
-
-            keyboardStates[count++] = keyboardState;
-
-            if (count >= keyboardStates.Length)
-            {
-                // Create the new array
-                var newArray = ArrayPool<KeyboardState>.Shared.Rent(keyboardStates.Length * 2);
-
-                // Copy the old array to the new array
-                keyboardStates.AsSpan().CopyTo(newArray);
-
-                // Return the old array
-                ArrayPool<KeyboardState>.Shared.Return(keyboardStates);
-
-                keyboardStates = newArray;
-            }
-        }
-
-        return keyboardStates;
-    }
-
-    public override void Write(Utf8JsonWriter writer, KeyboardState[] value, JsonSerializerOptions options)
-    {
-        JsonSerializer.Serialize(writer, value, options);
-    }
-}
-
-class KeyboardStatePolicyProvider : IPooledObjectPolicy<KeyboardState>
-{
-    public KeyboardState Create()
-    {
-        return new();
-    }
-
-    public bool Return(KeyboardState obj)
-    {
-        obj.Reset();
-
-        return true;
     }
 }

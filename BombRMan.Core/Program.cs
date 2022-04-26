@@ -1,13 +1,6 @@
 using BombRMan.Hubs;
-using Microsoft.Extensions.ObjectPool;
 
 var builder = WebApplication.CreateBuilder(args);
-
-var provider = new DefaultObjectPoolProvider();
-provider.MaximumRetained = 1000;
-var pool = provider.Create(new KeyboardStatePolicyProvider());
-
-builder.Services.AddSingleton(pool);
 
 builder.Services.AddSignalR(o =>
 {
@@ -15,7 +8,7 @@ builder.Services.AddSignalR(o =>
 })
 .AddJsonProtocol(o =>
 {
-    o.PayloadSerializerOptions.Converters.Add(new KeyboardStateConverter(pool));
+    o.PayloadSerializerOptions.Converters.Add(new KeyboardStateConverter());
 });
 
 builder.Services.AddSingleton<GameState>();

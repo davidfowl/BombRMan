@@ -158,7 +158,7 @@
 
             var buffer = inputs.splice(0, inputs.length);
             if (buffer.length > 0) {
-                this.gameServer.invoke('sendKeys', buffer);
+                this.gameServer.send('sendKeys', buffer);
                 lastSentInputId = buffer[buffer.length - 1].id;
             }
         },

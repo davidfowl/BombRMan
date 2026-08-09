@@ -22,6 +22,9 @@
         get: function(x, y) {
             return map[this.getIndex(x, y)];
         },
+        snapshot: function() {
+            return map.slice(0, this.width * this.height);
+        },
         fill : function(mapValue) {
             for(var i = 0; i < mapValue.length; ++i) {
                 map[i] = mapValue.charAt(i) - '0';

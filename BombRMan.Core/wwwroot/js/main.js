@@ -19,6 +19,10 @@
         var engine = new window.Game.Engine(assetManager);
         var renderer = new window.Game.Renderer(assetManager);
 
+        window.Game.getDebugState = function () {
+            return engine.getDebugState();
+        };
+
         engine.initialize();
 
         animate(engine, renderer, canvas, context);

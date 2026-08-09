@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             // If you have changed target frameworks, make sure to update the program path.
-            "program": "${workspaceFolder}/BombRMan.Core/bin/Debug/net7.0/BombRMan.Core.dll",
+            "program": "${workspaceFolder}/BombRMan.Core/bin/Debug/net10.0/BombRMan.Core.dll",
             "args": [],
             "cwd": "${workspaceFolder}/BombRMan.Core",
             "stopAtEntry": false,

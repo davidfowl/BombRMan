@@ -95,6 +95,64 @@
             WALL: 2,
             BRICK: 3,
         };
+
+        this.getDebugState = function () {
+            var players = {};
+
+            for (var index in this.players) {
+                var player = this.players[index];
+                if (player) {
+                    players[index] = {
+                        x: player.x,
+                        y: player.y,
+                        exactX: player.exactX,
+                        exactY: player.exactY,
+                        direction: player.direction,
+                        bombs: player.bombs,
+                        maxBombs: player.maxBombs,
+                        power: player.power,
+                        speed: player.speed
+                    };
+                }
+            }
+
+            return {
+                connectionState: this.gameServer.state,
+                fps: window.Game.TicksPerSecond,
+                playerIndex: this.playerIndex,
+                players: players,
+                predictedPlayer: this.playerIndex === undefined ? null : players[this.playerIndex],
+                serverPlayer: this.ghost ? {
+                    x: this.ghost.x,
+                    y: this.ghost.y,
+                    exactX: this.ghost.exactX,
+                    exactY: this.ghost.exactY,
+                    direction: this.ghost.direction
+                } : null,
+                map: {
+                    width: this.map.width,
+                    height: this.map.height,
+                    tileSize: this.map.tileSize,
+                    tiles: this.map.snapshot()
+                },
+                sprites: this.sprites.map(function (sprite) {
+                    return {
+                        type: sprite.type,
+                        x: sprite.x,
+                        y: sprite.y,
+                        ticks: sprite.ticks
+                    };
+                }),
+                network: {
+                    lastInputId: inputId - 1,
+                    lastSentInputId: lastSentInputId,
+                    lastProcessedInputId: lastProcessed,
+                    lastProcessedTime: lastProcessedTime,
+                    rtt: lastProcessedRTT,
+                    serverStats: serverStats
+                }
+            };
+        };
     };
 
     window.Game.Engine.prototype = {

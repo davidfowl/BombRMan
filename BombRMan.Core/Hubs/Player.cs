@@ -25,6 +25,11 @@ public class Player
 
     public void Update(in KeyboardState input)
     {
+        Update(input, GameState.Map);
+    }
+
+    public void Update(in KeyboardState input, Map map)
+    {
         LastProcessed = input.Id;
         LastProcessedTime = input.Time;
 
@@ -76,13 +81,11 @@ public class Player
         x += DirectionX * GameState.DELTA;
         y += DirectionY * GameState.DELTA;
 
-        MoveExact(x, y);
+        MoveExact(x, y, map);
     }
 
-    private void MoveExact(int x, int y)
+    private void MoveExact(int x, int y, Map map)
     {
-        var map = GameState.Map;
-
         float effectiveX = x / (GameState.POWER * 1f),
               effectiveY = y / (GameState.POWER * 1f);
 

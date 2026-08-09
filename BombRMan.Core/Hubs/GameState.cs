@@ -160,8 +160,8 @@ public class GameState
             int update = Environment.TickCount;
             // Get difference
             int delta = update - lastUpdate;
-            // Loop while difference is greater than a frame tick
-            while (delta > frameTicks)
+            // Loop while difference is at least one frame tick
+            while (delta >= frameTicks)
             {
                 delta -= frameTicks;
 
@@ -188,8 +188,8 @@ public class GameState
                 input.Dispose();
 
                 _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
+                Interlocked.Increment(ref _inputsPerSecond);
             }
-            Interlocked.Increment(ref _inputsPerSecond);
         }
     }
     class ServerStats

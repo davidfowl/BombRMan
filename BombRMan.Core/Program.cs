@@ -21,3 +21,5 @@ app.UseRouting();
 app.MapHub<GameServer>("/game");
 
 app.Run();
+
+public partial class Program;

@@ -1,7 +1,8 @@
 ﻿using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Collections.Concurrent;
 using System.Drawing;
+using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
@@ -12,6 +13,7 @@ public class GameState
     public const int POWER = 100;
     public const int DELTA = 10;
     public const int FPS = 60;
+    private static readonly long InputTimeoutTicks = Stopwatch.Frequency / 4;
 
     public const int MAX_QUEUED_INPUTS_PER_PLAYER = 30;
     private static readonly TimeSpan GameLoopShutdownTimeout = TimeSpan.FromSeconds(5);
@@ -190,7 +192,6 @@ public class GameState
             _activePlayers.Add(new PlayerState
             {
                 PlayerId = playerId,
-                Inputs = new ConcurrentQueue<KeyboardState>(),
                 Player = player,
             });
 
@@ -205,6 +206,7 @@ public class GameState
         if (_activePlayers.TryRemove(playerId, out var state))
         {
             player = state.Player;
+            state.Dispose();
             _availablePlayers.Push(CreatePlayer(state.Player.Index));
 
             return true;
@@ -221,21 +223,36 @@ public class GameState
             {
                 if (input.KeyState is null) break;
 
-                state.Inputs.Enqueue(input);
+                if (!state.Inputs.TryAccept(input, Stopwatch.GetTimestamp()))
+                {
+                    input.Dispose();
+                }
             }
-
-            var dropped = TrimQueue(state.Inputs, MAX_QUEUED_INPUTS_PER_PLAYER);
-            if (dropped > 0)
+        }
+        else
+        {
+            foreach (var input in inputs)
             {
-                Interlocked.Add(ref _droppedInputs, dropped);
+                if (input.KeyState is null) break;
+                input.Dispose();
             }
 
-            InterlockedMax(ref _maxQueueDepth, state.Inputs.Count);
         }
 
         // Return the batch to the pool, clear the array so we can use null to figure out what
         // the last entry is without storing a struct on the heap
         ArrayPool<KeyboardState>.Shared.Return(inputs, clearArray: true);
+    }
+
+    private static void InterlockedMax(ref int location, int value)
+    {
+        int initial, computed;
+        do
+        {
+            initial = Volatile.Read(ref location);
+            computed = Math.Max(initial, value);
+        }
+        while (Interlocked.CompareExchange(ref location, computed, initial) != initial);
     }
 
     internal static int TrimQueue(ConcurrentQueue<KeyboardState> queue, int maxSize)
@@ -251,17 +268,10 @@ public class GameState
         return droppedCount;
     }
 
-    private static void InterlockedMax(ref int location, int value)
-    {
-        int initial, computed;
-        do
-        {
-            initial = Volatile.Read(ref location);
-            computed = Math.Max(initial, value);
-        }
-        while (Interlocked.CompareExchange(ref location, computed, initial) != initial);
-    }
-
+    /// <summary>
+    /// Given the elapsed time since the last catch-up pass and the fixed frame duration, returns
+    /// how many simulation frames should run and whether the loop is falling behind schedule.
+    /// </summary>
     internal static (int Iterations, int RemainingDelta, bool IsOverrun) ComputeFrameAdvance(int delta, int frameTicks)
     {
         var iterations = 0;
@@ -277,20 +287,25 @@ public class GameState
 
     public void RunGameLoop()
     {
-        var frameTicks = (int)Math.Round(1000.0 / FPS);
-        var lastUpdate = Environment.TickCount;
+        long lastUpdate = Stopwatch.GetTimestamp();
+        long accumulatedTicks = 0;
 
         try
         {
             while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                int update = Environment.TickCount;
-                var delta = update - lastUpdate;
-                InterlockedMax(ref _maxObservedDeltaMs, delta);
-                var (iterations, remainingDelta, isOverrun) = ComputeFrameAdvance(delta, frameTicks);
+                long update = Stopwatch.GetTimestamp();
+                var elapsed = update - lastUpdate;
+                accumulatedTicks += elapsed * FPS;
+                lastUpdate = update;
 
-                for (var i = 0; i < iterations; i++)
+                var deltaMs = (int)Math.Min(int.MaxValue, elapsed * 1000 / Stopwatch.Frequency);
+                InterlockedMax(ref _maxObservedDeltaMs, deltaMs);
+
+                var iterations = 0;
+                while (accumulatedTicks >= Stopwatch.Frequency)
                 {
+                    accumulatedTicks -= Stopwatch.Frequency;
                     try
                     {
                         Update();
@@ -299,14 +314,14 @@ public class GameState
                     {
                         _logger.LogError(ex, "Unhandled exception during game loop tick; continuing.");
                     }
+                    iterations++;
                 }
 
-                if (isOverrun)
+                if (iterations > 1)
                 {
                     Interlocked.Increment(ref _tickOverruns);
                 }
 
-                lastUpdate = update - remainingDelta;
                 Thread.Sleep(1);
             }
         }
@@ -319,17 +334,25 @@ public class GameState
     private void Update()
     {
         Interlocked.Increment(ref _updatesPerSecond);
+        var now = Stopwatch.GetTimestamp();
 
         foreach (var state in _activePlayers.PlayerStates)
         {
-            if (state.Inputs.TryDequeue(out var input))
+            if (state.Inputs.TryTakeLatest(out var input))
             {
                 UpdatePlayer(state, input);
 
                 input.Dispose();
-
                 Interlocked.Increment(ref _inputsPerSecond);
             }
+
+            if (state.Inputs.IsExpired(now, InputTimeoutTicks))
+            {
+                state.Player.Stop();
+            }
+
+            state.Player.Update(_map, IsBlockedByBomb);
+            _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
         }
 
         UpdateBombs();
@@ -342,9 +365,7 @@ public class GameState
     {
         var player = state.Player;
 
-        player.Update(input, _map, IsBlockedByBomb);
-
-        _ = _hubContext.Clients.All.SendAsync("updatePlayerState", player);
+        player.ApplyInput(input);
 
         var bombKeyDown = input[Keys.A];
 

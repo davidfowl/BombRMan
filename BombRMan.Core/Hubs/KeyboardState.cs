@@ -20,6 +20,11 @@ public readonly struct KeyboardState : IDisposable
     {
         get
         {
+            if (KeyState is null)
+            {
+                return false;
+            }
+
             var index = (int)key >> 5;
             var bit = (uint)(1 << ((int)key & 0x1f));
             return (KeyState[index] & bit) == bit;
@@ -48,6 +53,9 @@ public readonly struct KeyboardState : IDisposable
 
     public void Dispose()
     {
-        ArrayPool<uint>.Shared.Return(KeyState);
+        if (KeyState is not null)
+        {
+            ArrayPool<uint>.Shared.Return(KeyState);
+        }
     }
 }

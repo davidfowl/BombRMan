@@ -29,41 +29,14 @@
 
     window.Game.Bomber.prototype = {
         handleInput: function (game) {
-            if (game.inputManager.isKeyUp(window.Game.Keys.UP)) {
-                this.directionY = 0;
-            }
+            var up = game.inputManager.isKeyDown(window.Game.Keys.UP),
+                down = game.inputManager.isKeyDown(window.Game.Keys.DOWN),
+                left = game.inputManager.isKeyDown(window.Game.Keys.LEFT),
+                right = game.inputManager.isKeyDown(window.Game.Keys.RIGHT);
 
-            if (game.inputManager.isKeyUp(window.Game.Keys.DOWN)) {
-                this.directionY = 0;
-            }
-
-            if (game.inputManager.isKeyUp(window.Game.Keys.LEFT)) {
-                this.directionX = 0;
-            }
-
-            if (game.inputManager.isKeyUp(window.Game.Keys.RIGHT)) {
-                this.directionX = 0;
-            }
-
-            if (game.inputManager.isKeyDown(window.Game.Keys.UP)) {
-                this.direction = window.Game.Direction.NORTH;
-                this.directionY = -1;
-            }
-
-            if (game.inputManager.isKeyDown(window.Game.Keys.DOWN)) {
-                this.direction = window.Game.Direction.SOUTH;
-                this.directionY = 1;
-            }
-
-            if (game.inputManager.isKeyDown(window.Game.Keys.LEFT)) {
-                this.direction = window.Game.Direction.WEST;
-                this.directionX = -1;
-            }
-
-            if (game.inputManager.isKeyDown(window.Game.Keys.RIGHT)) {
-                this.direction = window.Game.Direction.EAST;
-                this.directionX = 1;
-            }
+            this.directionY = up === down ? 0 : up ? -1 : 1;
+            this.directionX = left === right ? 0 : left ? -1 : 1;
+            this.setDirection(this.directionX, this.directionY);
 
             this.updateAnimation(game);
         },

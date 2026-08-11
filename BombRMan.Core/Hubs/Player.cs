@@ -42,53 +42,45 @@ public class Player
             return;
         }
 
+        ApplyInput(input);
+        Update(map, isBlockedByBomb);
+    }
+
+    public void ApplyInput(in KeyboardState input)
+    {
+        if (!IsAlive)
+        {
+            return;
+        }
+
         LastProcessed = input.Id;
         LastProcessedTime = input.Time;
 
-        int x = ExactX,
-            y = ExactY;
-
-        if (!input[Keys.UP])
-        {
-            DirectionY = 0;
-        }
-
-        if (!input[Keys.DOWN])
-        {
-            DirectionY = 0;
-        }
-
-        if (!input[Keys.LEFT])
-        {
-            DirectionX = 0;
-        }
-
-        if (!input[Keys.RIGHT])
-        {
-            DirectionX = 0;
-        }
-
-        if (input[Keys.UP])
-        {
-            DirectionY = -1;
-        }
-
-        if (input[Keys.DOWN])
-        {
-            DirectionY = 1;
-        }
-
-        if (input[Keys.LEFT])
-        {
-            DirectionX = -1;
-        }
-
-        if (input[Keys.RIGHT])
-        {
-            DirectionX = 1;
-        }
+        DirectionY = input[Keys.UP] == input[Keys.DOWN]
+            ? 0
+            : input[Keys.UP] ? -1 : 1;
+        DirectionX = input[Keys.LEFT] == input[Keys.RIGHT]
+            ? 0
+            : input[Keys.LEFT] ? -1 : 1;
 
         SetDirection(DirectionX, DirectionY);
+    }
+
+    public void Stop()
+    {
+        DirectionX = 0;
+        DirectionY = 0;
+    }
+
+    public void Update(Map map, Func<int, int, bool> isBlockedByBomb = null)
+    {
+        if (!IsAlive)
+        {
+            return;
+        }
+
+        int x = ExactX,
+            y = ExactY;
 
         x += DirectionX * GameState.DELTA;
         y += DirectionY * GameState.DELTA;

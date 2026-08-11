@@ -237,6 +237,19 @@ public class GameState
         while (Interlocked.CompareExchange(ref location, computed, initial) != initial);
     }
 
+    internal static int TrimQueue(ConcurrentQueue<KeyboardState> queue, int maxSize)
+    {
+        var droppedCount = 0;
+
+        while (queue.Count > maxSize && queue.TryDequeue(out var dropped))
+        {
+            dropped.Dispose();
+            droppedCount++;
+        }
+
+        return droppedCount;
+    }
+
     /// <summary>
     /// Given the elapsed time since the last catch-up pass (<paramref name="delta"/>) and the
     /// fixed frame duration (<paramref name="frameTicks"/>), returns how many simulation frames

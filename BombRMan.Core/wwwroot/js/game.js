@@ -96,6 +96,11 @@
             BRICK: 3,
         };
 
+        this.bombSprites = {};
+        this.powerupSprites = {};
+        this.roundState = 'WaitingForPlayers';
+        this.roundMessage = '';
+
         this.getDebugState = function () {
             var players = {};
 
@@ -162,23 +167,6 @@
         onKeyup: function (e) {
             setKeyState(e.keyCode, false);
         },
-        onExplosionEnd: function (x, y) {
-            var randomPower = Math.floor(Math.random() * window.Game.Powerups.EXPLOSION) + window.Game.Powerups.SPEED;
-
-            if (this.map.get(x, y) === this.types.BRICK) {
-                this.map.set(x, y, this.types.GRASS);
-
-                this.addSprite(new window.Game.Powerup(x, y, 5, randomPower));
-            }
-        },
-        onExplosion: function (x, y) {
-            for (var i = 0; i < this.sprites.length; ++i) {
-                var sprite = this.sprites[i];
-                if (sprite.explode && sprite.x === x && sprite.y === y) {
-                    sprite.explode(this);
-                }
-            }
-        },
         getSpritesAt: function (x, y) {
             var sprites = [];
             for (var i = 0; i < this.sprites.length; ++i) {
@@ -188,10 +176,6 @@
                 }
             }
             return sprites;
-        },
-        canDestroy: function (x, y) {
-            var tile = this.map.get(x, y);
-            return tile === this.types.BRICK || tile === this.types.GRASS;
         },
         addSprite: function (sprite) {
             this.sprites.push(sprite);
@@ -293,7 +277,121 @@
                 serverStats = stats;
             });
 
+            // Server-authoritative bomb/explosion/powerup/round events. The client only
+            // renders sprites/tiles/state pushed by the server - it never simulates them.
+            this.gameServer.on('initializeBombs', function (bombs) {
+                for (var i = 0; i < bombs.length; ++i) {
+                    that.addBombSprite(bombs[i]);
+                }
+            });
+
+            this.gameServer.on('initializeExplosions', function (explosions) {
+                for (var i = 0; i < explosions.length; ++i) {
+                    that.addSprite(that.createExplosionSprite(explosions[i].x, explosions[i].y));
+                }
+            });
+
+            this.gameServer.on('initializePowerups', function (powerups) {
+                for (var i = 0; i < powerups.length; ++i) {
+                    that.addPowerupSprite(powerups[i]);
+                }
+            });
+
+            this.gameServer.on('bombPlaced', function (bomb) {
+                that.addBombSprite(bomb);
+            });
+
+            this.gameServer.on('bombExploded', function (data) {
+                var bombSprite = that.bombSprites[data.bombId];
+                if (bombSprite) {
+                    that.removeSprite(bombSprite);
+                    delete that.bombSprites[data.bombId];
+                }
+
+                for (var i = 0; i < data.tiles.length; ++i) {
+                    that.addSprite(that.createExplosionSprite(data.tiles[i].x, data.tiles[i].y));
+                }
+            });
+
+            this.gameServer.on('mapTileChanged', function (change) {
+                that.map.set(change.x, change.y, change.tile);
+            });
+
+            this.gameServer.on('powerupSpawned', function (powerup) {
+                that.addPowerupSprite(powerup);
+            });
+
+            this.gameServer.on('powerupCollected', function (data) {
+                var key = that.powerupKey(data.x, data.y);
+                var sprite = that.powerupSprites[key];
+                if (sprite) {
+                    that.removeSprite(sprite);
+                    delete that.powerupSprites[key];
+                }
+            });
+
+            this.gameServer.on('playerEliminated', function (player) {
+                var bomber = player.index === that.playerIndex ? that.ghost : that.players[player.index];
+                if (bomber) {
+                    bomber.eliminated = true;
+                }
+            });
+
+            this.gameServer.on('roundStarted', function () {
+                that.roundState = 'InProgress';
+                that.roundMessage = '';
+            });
+
+            this.gameServer.on('roundOver', function (data) {
+                that.roundState = 'RoundOver';
+                that.roundMessage = data.winnerIndex === null || data.winnerIndex === undefined
+                    ? 'Draw!'
+                    : 'Player ' + data.winnerIndex + ' wins!';
+            });
+
             this.gameServer.start();
+        },
+        powerupKey: function (x, y) {
+            return x + ',' + y;
+        },
+        createExplosionSprite: function (x, y) {
+            var game = this;
+            // Purely cosmetic countdown - the server is the source of truth for whether a
+            // tile is dangerous; this only controls how long the visual effect lingers.
+            return {
+                type: window.Game.Sprites.EXPLOSION,
+                order: 1,
+                x: x,
+                y: y,
+                ticks: window.Game.TicksPerSecond,
+                update: function () {
+                    this.ticks--;
+                    if (this.ticks <= 0) {
+                        game.removeSprite(this);
+                    }
+                }
+            };
+        },
+        addBombSprite: function (bomb) {
+            var sprite = {
+                type: window.Game.Sprites.BOMB,
+                order: 0,
+                x: bomb.x,
+                y: bomb.y
+            };
+            this.bombSprites[bomb.id] = sprite;
+            this.addSprite(sprite);
+        },
+        addPowerupSprite: function (powerup) {
+            var sprite = {
+                type: window.Game.Sprites.POWERUP,
+                order: 1,
+                x: powerup.x,
+                y: powerup.y,
+                powerupType: powerup.type
+            };
+            this.powerupSprites[this.powerupKey(powerup.x, powerup.y)] = sprite;
+            this.addSprite(sprite);
         },
         update: function () {
             this.ticks++;

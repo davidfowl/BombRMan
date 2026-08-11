@@ -266,18 +266,11 @@
             });
 
             this.gameServer.on('updatePlayerState', function (player) {
-                var sprite = null;
-                if (player.index === that.playerIndex) {
-                    sprite = that.ghost;
-                    lastProcessed = player.lastProcessed;
-                    lastProcessedTime = player.lastProcessedTime;
-                }
-                else {
-                    sprite = that.players[player.index];
-                }
+                function applyPlayerState(sprite) {
+                    if (!sprite) {
+                        return;
+                    }
 
-                if (sprite) {
-                    // Brute force
                     sprite.x = player.x;
                     sprite.y = player.y;
                     sprite.exactX = player.exactX;
@@ -286,6 +279,17 @@
                     sprite.directionX = player.directionX;
                     sprite.directionY = player.directionY;
                     sprite.updateAnimation(that);
+                }
+
+                if (player.index === that.playerIndex) {
+                    lastProcessed = player.lastProcessed;
+                    lastProcessedTime = player.lastProcessedTime;
+
+                    applyPlayerState(that.ghost);
+                    applyPlayerState(that.players[player.index]);
+                }
+                else {
+                    applyPlayerState(that.players[player.index]);
                 }
             });
 

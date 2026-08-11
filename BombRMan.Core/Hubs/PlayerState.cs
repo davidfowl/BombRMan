@@ -1,10 +1,10 @@
-﻿using System.Collections.Concurrent;
-
 namespace BombRMan.Hubs;
 
-public class PlayerState
+internal sealed class PlayerState : IDisposable
 {
     public string PlayerId { get; set; }
-    public ConcurrentQueue<KeyboardState> Inputs { get; set; }
+    public PlayerInputBuffer Inputs { get; } = new();
     public Player Player { get; set; }
+
+    public void Dispose() => Inputs.Dispose();
 }

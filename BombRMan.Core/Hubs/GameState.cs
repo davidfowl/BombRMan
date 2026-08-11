@@ -1,7 +1,8 @@
 ﻿using System.Buffers;
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.Collections.Concurrent;
 using System.Drawing;
+using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
 
 namespace BombRMan.Hubs;
@@ -11,6 +12,7 @@ public class GameState
     public const int POWER = 100;
     public const int DELTA = 10;
     public const int FPS = 60;
+    private static readonly long InputTimeoutTicks = Stopwatch.Frequency / 4;
 
     static string _mapData = "222222222222222" +
                              "200000000000002" +
@@ -100,7 +102,6 @@ public class GameState
             _activePlayers.Add(new PlayerState
             {
                 PlayerId = playerId,
-                Inputs = new ConcurrentQueue<KeyboardState>(),
                 Player = player,
             });
 
@@ -115,6 +116,7 @@ public class GameState
         if (_activePlayers.TryRemove(playerId, out var state))
         {
             player = state.Player;
+            state.Dispose();
             Point pos = _initialPositions[state.Player.Index];
             _availablePlayers.Push(new Player
             {
@@ -141,7 +143,18 @@ public class GameState
             {
                 if (input.KeyState is null) break;
 
-                state.Inputs.Enqueue(input);
+                if (!state.Inputs.TryAccept(input, Stopwatch.GetTimestamp()))
+                {
+                    input.Dispose();
+                }
+            }
+        }
+        else
+        {
+            foreach (var input in inputs)
+            {
+                if (input.KeyState is null) break;
+                input.Dispose();
             }
         }
 
@@ -152,24 +165,20 @@ public class GameState
 
     public void RunGameLoop()
     {
-        var frameTicks = (int)Math.Round(1000.0 / FPS);
-        var lastUpdate = Environment.TickCount;
+        long lastUpdate = Stopwatch.GetTimestamp();
+        long accumulatedTicks = 0;
 
         while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
         {
-            int update = Environment.TickCount;
-            // Get difference
-            int delta = update - lastUpdate;
-            // Loop while difference is at least one frame tick
-            while (delta >= frameTicks)
-            {
-                delta -= frameTicks;
+            long update = Stopwatch.GetTimestamp();
+            accumulatedTicks += (update - lastUpdate) * FPS;
+            lastUpdate = update;
 
+            while (accumulatedTicks >= Stopwatch.Frequency)
+            {
+                accumulatedTicks -= Stopwatch.Frequency;
                 Update();
             }
-
-            // Remove the carry over delta from update and store as lastUpdate
-            lastUpdate = update - delta;
 
             Thread.Sleep(1);
         }
@@ -178,18 +187,25 @@ public class GameState
     private void Update()
     {
         Interlocked.Increment(ref _updatesPerSecond);
+        var now = Stopwatch.GetTimestamp();
 
         foreach (var state in _activePlayers.PlayerStates)
         {
-            if (state.Inputs.TryDequeue(out var input))
+            if (state.Inputs.TryTakeLatest(out var input))
             {
-                state.Player.Update(input);
+                state.Player.ApplyInput(input);
 
                 input.Dispose();
-
-                _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
                 Interlocked.Increment(ref _inputsPerSecond);
             }
+
+            if (state.Inputs.IsExpired(now, InputTimeoutTicks))
+            {
+                state.Player.Stop();
+            }
+
+            state.Player.Update(_map);
+            _ = _hubContext.Clients.All.SendAsync("updatePlayerState", state.Player);
         }
     }
     class ServerStats

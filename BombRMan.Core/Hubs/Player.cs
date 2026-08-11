@@ -23,13 +23,25 @@ public class Player
 
     public double LastProcessedTime { get; set; }
 
+    // Combat state (server-authoritative)
+    public int MaxBombs { get; set; } = 1;
+    public int ActiveBombs { get; set; }
+    public int PowerLevel { get; set; } = 1;
+    public int Speed { get; set; } = 1;
+    public bool IsAlive { get; set; } = true;
+
     public void Update(in KeyboardState input)
     {
         Update(input, GameState.Map);
     }
 
-    public void Update(in KeyboardState input, Map map)
+    public void Update(in KeyboardState input, Map map, Func<int, int, bool> isBlockedByBomb = null)
     {
+        if (!IsAlive)
+        {
+            return;
+        }
+
         LastProcessed = input.Id;
         LastProcessedTime = input.Time;
 
@@ -81,10 +93,10 @@ public class Player
         x += DirectionX * GameState.DELTA;
         y += DirectionY * GameState.DELTA;
 
-        MoveExact(x, y, map);
+        MoveExact(x, y, map, isBlockedByBomb);
     }
 
-    private void MoveExact(int x, int y, Map map)
+    private void MoveExact(int x, int y, Map map, Func<int, int, bool> isBlockedByBomb = null)
     {
         float effectiveX = x / (GameState.POWER * 1f),
               effectiveY = y / (GameState.POWER * 1f);
@@ -105,7 +117,7 @@ public class Player
                 targetY = actualY + t.Y;
 
             var targetRect = new RectangleF(targetX * map.TileSize, targetY * map.TileSize, map.TileSize, map.TileSize);
-            var movable = map.Movable(targetX, targetY);
+            var movable = map.Movable(targetX, targetY) && !(isBlockedByBomb?.Invoke(targetX, targetY) ?? false);
             var intersects = sourceRect.IntersectsWith(targetRect);
 
             if (!movable && intersects)

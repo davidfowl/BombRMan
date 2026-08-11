@@ -99,6 +99,28 @@
                         break;
                 }
             }
+
+            if (game.roundState === 'RoundOver' && game.roundMessage) {
+                context.save();
+                context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+                context.fillRect(0, 0, game.map.width * game.map.tileSize, game.map.height * game.map.tileSize);
+                context.fillStyle = 'white';
+                context.font = 'bold 24px sans-serif';
+                context.textAlign = 'center';
+                context.fillText(game.roundMessage,
+                    (game.map.width * game.map.tileSize) / 2,
+                    (game.map.height * game.map.tileSize) / 2);
+                context.restore();
+            }
+            else if (game.roundState === 'WaitingForPlayers') {
+                context.save();
+                context.fillStyle = 'white';
+                context.font = 'bold 16px sans-serif';
+                context.textAlign = 'center';
+                context.fillText('Waiting for players...',
+                    (game.map.width * game.map.tileSize) / 2, 20);
+                context.restore();
+            }
         }
     };
 

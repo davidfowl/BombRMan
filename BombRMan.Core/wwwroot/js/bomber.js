@@ -25,20 +25,9 @@
         this.activeFrameIndex = 0;
 
         this.direction = window.Game.Direction.SOUTH;
-        this.bombs = 0;
-        this.bombType = window.Game.Bombs.NORMAL;
     };
 
     window.Game.Bomber.prototype = {
-        createBomb: function (game) {
-            if (this.bombs >= this.maxBombs) {
-                return;
-            }
-
-            this.bombs++;
-            var bomb = new window.Game.Bomb(this.x, this.y, 3, this.power, this.bombType, this);
-            game.addSprite(bomb);
-        },
         handleInput: function (game) {
             if (game.inputManager.isKeyUp(window.Game.Keys.UP)) {
                 this.directionY = 0;
@@ -77,11 +66,6 @@
             }
 
             this.updateAnimation(game);
-
-            if (game.inputManager.isKeyPress(window.Game.Keys.A) ||
-               game.inputManager.isKeyDown(window.Game.Keys.A)) {
-                this.createBomb(game);
-            }
         },
         updateAnimation: function (game) {
             var moving = this.directionX !== 0 || this.directionY !== 0;
@@ -122,40 +106,6 @@
                     this.activeFrameIndex = (this.activeFrameIndex + 1) % this.frameLength;
                 }
             }
-
-            var sprites = game.getSpritesAt(this.x, this.y);
-            for (var i = 0; i < sprites.length; ++i) {
-                var sprite = sprites[i];
-                if (sprite.type === window.Game.Sprites.POWERUP) {
-                    switch (sprite.powerupType) {
-                        case window.Game.Powerups.SPEED:
-                            this.increaseSpeed();
-                            break;
-                        case window.Game.Powerups.BOMB:
-                            this.increaseMaxBombs();
-                            break;
-                        case window.Game.Powerups.EXPLOSION:
-                            this.increasePower();
-                            break;
-                    }
-                    sprite.explode(game);
-                }
-            }
-        },
-        explode: function (game) {
-            game.removeSprite(this);
-        },
-        removeBomb: function () {
-            this.bombs--;
-        },
-        increaseSpeed: function () {
-            this.speed++;
-        },
-        increaseMaxBombs: function () {
-            this.maxBombs++;
-        },
-        increasePower: function () {
-            this.power++;
         },
         getXHitTargets: function () {
             if (this.directionX === 1) {

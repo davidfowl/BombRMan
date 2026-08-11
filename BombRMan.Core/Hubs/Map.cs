@@ -57,4 +57,30 @@ public class Map
 
         return false;
     }
+
+    /// <summary>
+    /// Restores every tile back to the original layout described by <see cref="RawData"/>,
+    /// undoing any brick destruction from a previous round.
+    /// </summary>
+    public void Reset()
+    {
+        for (int i = 0; i < RawData.Length; i++)
+        {
+            _map[i] = (Tile)((int)RawData[i] - '0');
+        }
+    }
+
+    /// <summary>
+    /// Returns the current tile layout (reflecting any destroyed bricks) encoded the same way
+    /// as <see cref="RawData"/>, for syncing clients that join mid-round.
+    /// </summary>
+    public string Snapshot()
+    {
+        var chars = new char[_map.Length];
+        for (int i = 0; i < _map.Length; i++)
+        {
+            chars[i] = (char)('0' + (int)_map[i]);
+        }
+        return new string(chars);
+    }
 }

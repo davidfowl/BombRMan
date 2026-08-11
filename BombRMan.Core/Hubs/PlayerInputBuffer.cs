@@ -8,6 +8,17 @@ internal sealed class PlayerInputBuffer : IDisposable
     private int _lastAcceptedId = -1;
     private long _lastReceivedTimestamp;
 
+    public int Count
+    {
+        get
+        {
+            lock (_lock)
+            {
+                return _hasLatest ? 1 : 0;
+            }
+        }
+    }
+
     public bool TryAccept(KeyboardState input, long receivedTimestamp)
     {
         lock (_lock)

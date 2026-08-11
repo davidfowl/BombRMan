@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Drawing;
 using System.Diagnostics;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 
 namespace BombRMan.Hubs;
 
@@ -13,6 +14,13 @@ public class GameState
     public const int DELTA = 10;
     public const int FPS = 60;
     private static readonly long InputTimeoutTicks = Stopwatch.Frequency / 4;
+
+    // Bounds how many un-processed inputs we'll hold per player before dropping the oldest ones.
+    // Prevents a slow-draining/disconnected client from growing its queue unbounded.
+    public const int MAX_QUEUED_INPUTS_PER_PLAYER = 30;
+
+    // How long we wait for the game loop thread to observe cancellation and exit before logging a warning.
+    private static readonly TimeSpan GameLoopShutdownTimeout = TimeSpan.FromSeconds(5);
 
     static string _mapData = "222222222222222" +
                              "200000000000002" +
@@ -34,20 +42,46 @@ public class GameState
     private readonly Map _map = new(_mapData, 15, 13, 32);
     private readonly IHubContext<GameServer> _hubContext;
     private readonly IHostApplicationLifetime _hostApplicationLifetime;
+    private readonly ILogger<GameState> _logger;
+    private readonly Thread _gameLoopThread;
+    private readonly ManualResetEventSlim _gameLoopStopped = new(initialState: false);
     private int _updatesPerSecond;
     private int _inputsPerSecond;
+    private int _droppedInputs;
+    private int _tickOverruns;
+    private int _maxObservedDeltaMs;
+    private int _maxQueueDepth;
 
-    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime)
+    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime, ILogger<GameState> logger)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
+        _logger = logger;
 
-        var gameLoopThread = new Thread(_ => RunGameLoop())
+        _gameLoopThread = new Thread(_ => RunGameLoop())
         {
-            IsBackground = true
+            IsBackground = true,
+            Name = "BombRMan.GameLoop"
         };
 
-        gameLoopThread.Start();
+        _gameLoopThread.Start();
+
+        // Best-effort: log (and wait for) an orderly game loop shutdown when the host starts stopping.
+        // The thread is a background thread so it will not block process exit on its own, but we want
+        // visibility into whether the loop actually observed the cancellation in a timely fashion.
+        _hostApplicationLifetime.ApplicationStopping.Register(() =>
+        {
+            _logger.LogInformation("Game loop shutdown requested.");
+
+            if (_gameLoopStopped.Wait(GameLoopShutdownTimeout))
+            {
+                _logger.LogInformation("Game loop stopped cleanly.");
+            }
+            else
+            {
+                _logger.LogWarning("Game loop did not stop within {TimeoutSeconds}s of shutdown being requested.", GameLoopShutdownTimeout.TotalSeconds);
+            }
+        });
 
         _initialPositions = new Point[4];
         _initialPositions[0] = new Point(1, 1);
@@ -83,9 +117,37 @@ public class GameState
         {
             var updates = Interlocked.Exchange(ref _updatesPerSecond, 0);
             var inputs = Interlocked.Exchange(ref _inputsPerSecond, 0);
+            var dropped = Interlocked.Exchange(ref _droppedInputs, 0);
+            var overruns = Interlocked.Exchange(ref _tickOverruns, 0);
+            var maxDelta = Interlocked.Exchange(ref _maxObservedDeltaMs, 0);
+            var maxQueueDepth = Interlocked.Exchange(ref _maxQueueDepth, 0);
+            var activePlayers = _activePlayers.PlayerStates;
+
+            var queueDepth = 0;
+            foreach (var state in activePlayers)
+            {
+                queueDepth += state.Inputs.Count;
+            }
 
             serverStats.Updates = updates;
             serverStats.ProcessedInputs = inputs;
+            serverStats.DroppedInputs = dropped;
+            serverStats.TickOverruns = overruns;
+            serverStats.MaxTickDeltaMs = maxDelta;
+            serverStats.QueueDepth = queueDepth;
+            serverStats.MaxQueueDepth = maxQueueDepth;
+            serverStats.ActivePlayers = activePlayers.Length;
+            serverStats.AvailablePlayerSlots = _availablePlayers.Count;
+
+            if (dropped > 0)
+            {
+                _logger.LogWarning("Dropped {DroppedInputs} input(s) due to queue overflow in the last interval.", dropped);
+            }
+
+            if (overruns > 0)
+            {
+                _logger.LogWarning("Game loop fell behind schedule: {TickOverruns} overrun frame(s), max observed delta {MaxTickDeltaMs}ms.", overruns, maxDelta);
+            }
 
             await _hubContext.Clients.All.SendAsync("serverStats", serverStats);
         }
@@ -156,6 +218,7 @@ public class GameState
                 if (input.KeyState is null) break;
                 input.Dispose();
             }
+
         }
 
         // Return the batch to the pool, clear the array so we can use null to figure out what
@@ -163,24 +226,72 @@ public class GameState
         ArrayPool<KeyboardState>.Shared.Return(inputs, clearArray: true);
     }
 
+    private static void InterlockedMax(ref int location, int value)
+    {
+        int initial, computed;
+        do
+        {
+            initial = Volatile.Read(ref location);
+            computed = Math.Max(initial, value);
+        }
+        while (Interlocked.CompareExchange(ref location, computed, initial) != initial);
+    }
+
+    /// <summary>
+    /// Given the elapsed time since the last catch-up pass (<paramref name="delta"/>) and the
+    /// fixed frame duration (<paramref name="frameTicks"/>), returns how many simulation frames
+    /// should run this pass, the leftover carry-over delta, and whether the loop is falling
+    /// behind schedule (more than one catch-up iteration was needed).
+    /// </summary>
+    internal static (int Iterations, int RemainingDelta, bool IsOverrun) ComputeFrameAdvance(int delta, int frameTicks)
+    {
+        var iterations = 0;
+
+        while (delta >= frameTicks)
+        {
+            delta -= frameTicks;
+            iterations++;
+        }
+
+        return (iterations, delta, iterations > 1);
+    }
+
     public void RunGameLoop()
     {
         long lastUpdate = Stopwatch.GetTimestamp();
         long accumulatedTicks = 0;
 
-        while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
+        try
         {
-            long update = Stopwatch.GetTimestamp();
-            accumulatedTicks += (update - lastUpdate) * FPS;
-            lastUpdate = update;
-
-            while (accumulatedTicks >= Stopwatch.Frequency)
+            while (!_hostApplicationLifetime.ApplicationStopping.IsCancellationRequested)
             {
-                accumulatedTicks -= Stopwatch.Frequency;
-                Update();
-            }
+                long update = Stopwatch.GetTimestamp();
+                var elapsed = update - lastUpdate;
+                accumulatedTicks += elapsed * FPS;
+                lastUpdate = update;
 
-            Thread.Sleep(1);
+                var deltaMs = (int)Math.Min(int.MaxValue, elapsed * 1000 / Stopwatch.Frequency);
+                InterlockedMax(ref _maxObservedDeltaMs, deltaMs);
+
+                var iterations = 0;
+                while (accumulatedTicks >= Stopwatch.Frequency)
+                {
+                    accumulatedTicks -= Stopwatch.Frequency;
+                    Update();
+                    iterations++;
+                }
+
+                if (iterations > 1)
+                {
+                    Interlocked.Increment(ref _tickOverruns);
+                }
+
+                Thread.Sleep(1);
+            }
+        }
+        finally
+        {
+            _gameLoopStopped.Set();
         }
     }
 
@@ -212,6 +323,13 @@ public class GameState
     {
         public int Updates { get; set; }
         public int ProcessedInputs { get; set; }
+        public int DroppedInputs { get; set; }
+        public int TickOverruns { get; set; }
+        public int MaxTickDeltaMs { get; set; }
+        public int QueueDepth { get; set; }
+        public int MaxQueueDepth { get; set; }
+        public int ActivePlayers { get; set; }
+        public int AvailablePlayerSlots { get; set; }
     }
 
     /// <summary>

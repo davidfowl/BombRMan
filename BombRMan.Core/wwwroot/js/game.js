@@ -323,6 +323,12 @@
                 lastProcessedRTT = performance.now() - lastProcessedTime;
             }
             window.Game.Logger.log('last server processed input time (ms) = ' + lastProcessedRTT);
+            if (serverStats) {
+                window.Game.Logger.log('server updates/s = ' + serverStats.updates + ', processed inputs/s = ' + serverStats.processedInputs);
+                window.Game.Logger.log('server queue depth = ' + serverStats.queueDepth + ' (max ' + serverStats.maxQueueDepth + '), dropped inputs = ' + serverStats.droppedInputs);
+                window.Game.Logger.log('server tick overruns = ' + serverStats.tickOverruns + ', max tick delta (ms) = ' + serverStats.maxTickDeltaMs);
+                window.Game.Logger.log('server players = ' + serverStats.activePlayers + ' active, ' + serverStats.availablePlayerSlots + ' available');
+            }
             window.Game.Logger.log('serverStats:' + JSON.stringify(serverStats));
         },
         movable: function (x, y) {

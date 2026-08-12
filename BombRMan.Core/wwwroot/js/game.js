@@ -253,6 +253,42 @@
                 }
             });
 
+            this.gameServer.on('roundReset', function (data) {
+                that.clearTransientSprites();
+                that.map.fill(data.map);
+
+                for (var i = 0; i < data.players.length; ++i) {
+                    var player = data.players[i];
+                    var bomber = that.players[player.index];
+
+                    if (!bomber) {
+                        bomber = new window.Game.Bomber(false);
+                        that.players[player.index] = bomber;
+                        that.addSprite(bomber);
+                    }
+
+                    bomber.eliminated = false;
+                    bomber.maxBombs = player.maxBombs;
+                    bomber.power = player.powerLevel;
+                    bomber.speed = player.speed;
+                    bomber.activeBombs = player.activeBombs;
+                    bomber.moveTo(player.x, player.y);
+                    bomber.updateAnimation(that);
+                }
+
+                if (that.ghost) {
+                    var localPlayer = data.players[that.playerIndex];
+                    if (localPlayer) {
+                        that.ghost.eliminated = false;
+                        that.ghost.moveTo(localPlayer.x, localPlayer.y);
+                        that.ghost.updateAnimation(that);
+                    }
+                }
+
+                that.roundState = data.roundState;
+                that.roundMessage = '';
+            });
+
             this.gameServer.on('updatePlayerState', function (player) {
                 function applyPlayerState(sprite) {
                     if (!sprite) {
@@ -361,6 +397,19 @@
         },
         powerupKey: function (x, y) {
             return x + ',' + y;
+        },
+        clearTransientSprites: function () {
+            for (var i = this.sprites.length - 1; i >= 0; --i) {
+                var sprite = this.sprites[i];
+                if (sprite.type === window.Game.Sprites.BOMB ||
+                    sprite.type === window.Game.Sprites.EXPLOSION ||
+                    sprite.type === window.Game.Sprites.POWERUP) {
+                    this.sprites.splice(i, 1);
+                }
+            }
+
+            this.bombSprites = {};
+            this.powerupSprites = {};
         },
         createExplosionSprite: function (x, y) {
             var game = this;

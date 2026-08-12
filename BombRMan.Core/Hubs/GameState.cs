@@ -48,6 +48,7 @@ public class GameState
     private readonly ILogger<GameState> _logger;
     private readonly Thread _gameLoopThread;
     private readonly ManualResetEventSlim _gameLoopStopped = new(initialState: false);
+    private readonly object _lifecycleBroadcastLock = new();
     private readonly Random _random = new();
 
     // Bombs/explosions/powerups are only ever mutated from the single game loop thread inside
@@ -64,6 +65,7 @@ public class GameState
     private int _tickOverruns;
     private int _maxObservedDeltaMs;
     private int _maxQueueDepth;
+    private Task _lastLifecycleBroadcast = Task.CompletedTask;
 
     public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime, ILogger<GameState> logger)
     {
@@ -504,7 +506,7 @@ public class GameState
                 {
                     player.IsAlive = false;
 
-                    _ = _hubContext.Clients.All.SendAsync("playerEliminated", player);
+                    QueueLifecycleBroadcast("playerEliminated", player);
                 }
             }
 
@@ -545,7 +547,7 @@ public class GameState
                 if (players.Length >= MIN_PLAYERS_TO_START)
                 {
                     RoundState = RoundState.InProgress;
-                    _ = _hubContext.Clients.All.SendAsync("roundStarted");
+                    QueueLifecycleBroadcast("roundStarted");
                 }
                 break;
 
@@ -555,7 +557,7 @@ public class GameState
                     RoundState = RoundState.RoundOver;
                     _roundResetTicksRemaining = ROUND_RESET_DELAY_TICKS;
 
-                    _ = _hubContext.Clients.All.SendAsync("roundOver", new RoundOver { WinnerIndex = winner?.Index });
+                    QueueLifecycleBroadcast("roundOver", new RoundOver { WinnerIndex = winner?.Index });
                 }
                 break;
 
@@ -570,6 +572,8 @@ public class GameState
 
     private void ResetRound()
     {
+        _lastLifecycleBroadcast.GetAwaiter().GetResult();
+
         _map.Reset();
         _bombs.Clear();
         _explosions.Clear();
@@ -594,12 +598,33 @@ public class GameState
 
         RoundState = ActivePlayers.Length >= MIN_PLAYERS_TO_START ? RoundState.InProgress : RoundState.WaitingForPlayers;
 
-        _ = _hubContext.Clients.All.SendAsync("initializeMap", _map.RawData);
-        _ = _hubContext.Clients.All.SendAsync("initialize", ActivePlayers);
-
-        if (RoundState == RoundState.InProgress)
+        QueueLifecycleBroadcast("roundReset", new RoundReset
         {
-            _ = _hubContext.Clients.All.SendAsync("roundStarted");
+            Map = _map.RawData,
+            Players = ActivePlayers,
+            RoundState = RoundState.ToString()
+        });
+    }
+
+    private void QueueLifecycleBroadcast(string method, object argument = null)
+    {
+        lock (_lifecycleBroadcastLock)
+        {
+            _lastLifecycleBroadcast = SendLifecycleBroadcastAsync(_lastLifecycleBroadcast, method, argument);
+        }
+    }
+
+    private async Task SendLifecycleBroadcastAsync(Task previous, string method, object argument)
+    {
+        await previous;
+
+        if (argument is null)
+        {
+            await _hubContext.Clients.All.SendAsync(method);
+        }
+        else
+        {
+            await _hubContext.Clients.All.SendAsync(method, argument);
         }
     }
 
@@ -640,6 +665,13 @@ public class GameState
     class RoundOver
     {
         public int? WinnerIndex { get; set; }
+    }
+
+    class RoundReset
+    {
+        public string Map { get; set; }
+        public ImmutableArray<Player> Players { get; set; }
+        public string RoundState { get; set; }
     }
 
     /// <summary>

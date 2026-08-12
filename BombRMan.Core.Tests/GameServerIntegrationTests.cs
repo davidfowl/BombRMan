@@ -50,6 +50,32 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Equal(moving.ExactX, stopped.ExactX);
     }
 
+    [Fact]
+    public async Task RoundResetBroadcastReplacesClientStateAtomically()
+    {
+        await using var first = CreateConnection();
+        await using var second = CreateConnection();
+        var reset = new TaskCompletionSource<RoundResetSnapshot>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        first.On<RoundResetSnapshot>("roundReset", value => reset.TrySetResult(value));
+
+        await first.StartAsync();
+        await second.StartAsync();
+        await Task.Delay(100);
+
+        await first.SendAsync("SendKeys", new[] { CreateInput(1, Keys.A) });
+
+        var snapshot = await reset.Task.WaitAsync(TimeSpan.FromSeconds(15));
+
+        Assert.Equal("InProgress", snapshot.RoundState);
+        Assert.Equal("222222222222222", snapshot.Map[..15]);
+        Assert.Equal(2, snapshot.Players.Count);
+        Assert.All(snapshot.Players, player => Assert.False(player.Eliminated));
+        Assert.Contains(snapshot.Players, player => player.X == 1 && player.Y == 1);
+        Assert.Contains(snapshot.Players, player => player.X == 13 && player.Y == 1);
+    }
+
     private HubConnection CreateConnection() =>
         new HubConnectionBuilder()
             .WithUrl(new Uri(_factory.Server.BaseAddress, "game"), options =>
@@ -99,5 +125,19 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         public int DirectionX { get; init; }
         public int DirectionY { get; init; }
         public int LastProcessed { get; init; }
+    }
+
+    private sealed class RoundResetSnapshot
+    {
+        public string Map { get; init; } = string.Empty;
+        public string RoundState { get; init; } = string.Empty;
+        public List<RoundResetPlayer> Players { get; init; } = new();
+    }
+
+    private sealed class RoundResetPlayer
+    {
+        public int X { get; init; }
+        public int Y { get; init; }
+        public bool Eliminated { get; init; }
     }
 }

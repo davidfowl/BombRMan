@@ -59,8 +59,12 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         await using var second = CreateConnection();
         var reset = new TaskCompletionSource<RoundResetSnapshot>(
             TaskCreationOptions.RunContinuationsAsynchronously);
+        var roundOver = new TaskCompletionSource<RoundOverSnapshot>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
 
         first.On<RoundResetSnapshot>("roundReset", value => reset.TrySetResult(value));
+        first.On<RoundOverSnapshot>("roundOver", value => roundOver.TrySetResult(value));
+        second.On<RoundOverSnapshot>("roundOver", value => roundOver.TrySetResult(value));
 
         await first.StartAsync();
         await second.StartAsync();
@@ -69,6 +73,7 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         await first.SendAsync("SendKeys", new[] { CreateInput(1, Keys.A) });
 
         var snapshot = await reset.Task.WaitAsync(TimeSpan.FromSeconds(15));
+        await roundOver.Task.WaitAsync(TimeSpan.FromSeconds(5));
 
         Assert.Equal("InProgress", snapshot.RoundState);
         Assert.Equal("222222222222222", snapshot.Map[..15]);
@@ -356,6 +361,11 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         public string Map { get; init; } = string.Empty;
         public string RoundState { get; init; } = string.Empty;
         public List<RoundResetPlayer> Players { get; init; } = new();
+    }
+
+    private sealed class RoundOverSnapshot
+    {
+        public int? WinnerIndex { get; init; }
     }
 
     private sealed class RoundResetPlayer

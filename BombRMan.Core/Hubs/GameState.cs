@@ -72,7 +72,7 @@ public class GameState
         IHubContext<GameServer> hubContext,
         IHostApplicationLifetime hostApplicationLifetime,
         ILogger<GameState> logger,
-        Func<int, int>? randomNext = null)
+        Func<int, int> randomNext = null)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;

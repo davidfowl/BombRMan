@@ -25,16 +25,16 @@ public class GameState
     private const int POWERUP_SPAWN_PERCENT = 40;
     private const int MIN_PLAYERS_TO_START = 2;
 
-    static string _mapData = "222222222222222" +
+    private static readonly string _mapData = "222222222222222" +
                              "200000000000002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
                              "200000000000002" +
                              "222222222222222";
@@ -50,6 +50,7 @@ public class GameState
     private readonly ManualResetEventSlim _gameLoopStopped = new(initialState: false);
     private readonly object _lifecycleBroadcastLock = new();
     private readonly Random _random = new();
+    private readonly Func<int, int> _randomNext;
 
     // Bombs/explosions/powerups are only ever mutated from the single game loop thread inside
     // Update(), so no additional synchronization is required for these collections.
@@ -67,11 +68,16 @@ public class GameState
     private int _maxQueueDepth;
     private Task _lastLifecycleBroadcast = Task.CompletedTask;
 
-    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime, ILogger<GameState> logger)
+    public GameState(
+        IHubContext<GameServer> hubContext,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ILogger<GameState> logger,
+        Func<int, int>? randomNext = null)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
         _logger = logger;
+        _randomNext = randomNext ?? _random.Next;
 
         _gameLoopThread = new Thread(_ => RunGameLoop())
         {
@@ -475,13 +481,13 @@ public class GameState
 
                 _ = _hubContext.Clients.All.SendAsync("mapTileChanged", new MapTileChange { X = tile.X, Y = tile.Y, Tile = Tile.GRASS });
 
-                if (_random.Next(100) < POWERUP_SPAWN_PERCENT)
+                if (BombLogic.ShouldSpawnPowerup(_randomNext(100), POWERUP_SPAWN_PERCENT))
                 {
                     var powerup = new Powerup
                     {
                         X = tile.X,
                         Y = tile.Y,
-                        Type = (PowerupType)_random.Next(3),
+                        Type = (PowerupType)_randomNext(3),
                     };
 
                     _powerups.Add(powerup);

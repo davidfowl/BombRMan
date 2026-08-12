@@ -8,6 +8,9 @@ namespace BombRMan.Hubs;
 /// </summary>
 public static class BombLogic
 {
+    public static bool ShouldSpawnPowerup(int roll, int spawnPercent) =>
+        roll >= 0 && roll < spawnPercent;
+
     public static bool CanPlaceBomb(Player player, Map map, int x, int y, IReadOnlyList<Bomb> bombs)
     {
         if (!player.IsAlive)

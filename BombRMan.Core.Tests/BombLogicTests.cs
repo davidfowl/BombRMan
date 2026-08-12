@@ -5,6 +5,16 @@ namespace BombRMan.Core.Tests;
 
 public class BombLogicTests
 {
+    [Theory]
+    [InlineData(0, true)]
+    [InlineData(39, true)]
+    [InlineData(40, false)]
+    [InlineData(-1, false)]
+    public void PowerupSpawnRollUsesConfiguredThreshold(int roll, bool expected)
+    {
+        Assert.Equal(expected, BombLogic.ShouldSpawnPowerup(roll, 40));
+    }
+
     private static Map CreateOpenMap() => new(
         "2222222" +
         "2000002" +

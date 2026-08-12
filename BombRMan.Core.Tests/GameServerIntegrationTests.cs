@@ -76,6 +76,29 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         Assert.Contains(snapshot.Players, player => player.X == 13 && player.Y == 1);
     }
 
+    [Fact]
+    public async Task DefaultMapHasBricksAndClearSpawnExits()
+    {
+        await using var connection = CreateConnection();
+        var mapTask = new TaskCompletionSource<string>(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        connection.On<string>("initializeMap", map => mapTask.TrySetResult(map));
+        await connection.StartAsync();
+
+        var map = await mapTask.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        Assert.Contains('3', map);
+        Assert.Equal('0', map[1 * 15 + 1]);
+        Assert.Equal('0', map[1 * 15 + 2]);
+        Assert.Equal('0', map[1 * 15 + 12]);
+        Assert.Equal('0', map[1 * 15 + 13]);
+        Assert.Equal('0', map[11 * 15 + 1]);
+        Assert.Equal('0', map[11 * 15 + 2]);
+        Assert.Equal('0', map[11 * 15 + 12]);
+        Assert.Equal('0', map[11 * 15 + 13]);
+    }
+
     private HubConnection CreateConnection() =>
         new HubConnectionBuilder()
             .WithUrl(new Uri(_factory.Server.BaseAddress, "game"), options =>

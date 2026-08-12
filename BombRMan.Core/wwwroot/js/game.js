@@ -116,7 +116,8 @@
                         bombs: player.bombs,
                         maxBombs: player.maxBombs,
                         power: player.power,
-                        speed: player.speed
+                        speed: player.speed,
+                        eliminated: !!player.eliminated
                     };
                 }
             }
@@ -124,6 +125,8 @@
             return {
                 connectionState: this.gameServer.state,
                 fps: window.Game.TicksPerSecond,
+                roundState: this.roundState,
+                roundMessage: this.roundMessage,
                 playerIndex: this.playerIndex,
                 players: players,
                 predictedPlayer: this.playerIndex === undefined ? null : players[this.playerIndex],
@@ -145,7 +148,8 @@
                         type: sprite.type,
                         x: sprite.x,
                         y: sprite.y,
-                        ticks: sprite.ticks
+                        ticks: sprite.ticks,
+                        powerupType: sprite.powerupType
                     };
                 }),
                 network: {

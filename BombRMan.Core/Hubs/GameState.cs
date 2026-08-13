@@ -578,6 +578,15 @@ public class GameState
 
     private void ResetRound()
     {
+        // Intentional sync-over-async: ResetRound only ever runs on the dedicated,
+        // non-thread-pool game-loop thread (see RunGameLoop), which has no
+        // SynchronizationContext to deadlock on. Blocking here guarantees any
+        // in-flight roundOver/playerEliminated broadcast fully lands before we
+        // mutate state and queue roundReset, preventing clients from observing a
+        // reset out of order with the prior lifecycle event (see the reset-race
+        // fix in QueueLifecycleBroadcast/SendLifecycleBroadcastAsync). A slow
+        // client send can stall a tick, but that's already surfaced via
+        // _tickOverruns rather than silently hidden.
         _lastLifecycleBroadcast.GetAwaiter().GetResult();
 
         _map.Reset();

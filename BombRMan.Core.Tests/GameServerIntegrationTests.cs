@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+using System.Threading.Channels;
 using BombRMan.Hubs;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -22,11 +22,11 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
     public async Task LatestInputStateDrivesAuthoritativeMovement()
     {
         await using var connection = CreateConnection();
-        var updates = new ConcurrentQueue<PlayerSnapshot>();
+        var updates = Channel.CreateUnbounded<PlayerSnapshot>();
         var initialized = new TaskCompletionSource<PlayerSnapshot>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         connection.On<PlayerSnapshot>("initializePlayer", player => initialized.TrySetResult(player));
-        connection.On<PlayerSnapshot>("updatePlayerState", updates.Enqueue);
+        connection.On<PlayerSnapshot>("updatePlayerState", update => updates.Writer.TryWrite(update));
 
         await connection.StartAsync();
         var initial = await initialized.Task.WaitAsync(TimeSpan.FromSeconds(5));
@@ -116,23 +116,23 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
                 services.AddSingleton<Func<int, int>>(_ => _ => 0)));
         await using var first = CreateConnection(factory);
         await using var second = CreateConnection(factory);
-        var spawned = new ConcurrentQueue<PowerupSnapshot>();
-        var collected = new ConcurrentQueue<PowerupCollectedSnapshot>();
-        var tileChanges = new ConcurrentQueue<MapTileChangeSnapshot>();
-        var updates = new ConcurrentQueue<PlayerSnapshot>();
+        var spawned = Channel.CreateUnbounded<PowerupSnapshot>();
+        var collected = Channel.CreateUnbounded<PowerupCollectedSnapshot>();
+        var tileChanges = Channel.CreateUnbounded<MapTileChangeSnapshot>();
+        var updates = Channel.CreateUnbounded<PlayerSnapshot>();
         var firstInitialized = new TaskCompletionSource<PlayerSnapshot>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         var secondInitialized = new TaskCompletionSource<PlayerSnapshot>(
             TaskCreationOptions.RunContinuationsAsynchronously);
 
-        first.On<PowerupSnapshot>("powerupSpawned", spawned.Enqueue);
-        second.On<PowerupSnapshot>("powerupSpawned", spawned.Enqueue);
-        first.On<PowerupCollectedSnapshot>("powerupCollected", collected.Enqueue);
-        second.On<PowerupCollectedSnapshot>("powerupCollected", collected.Enqueue);
-        first.On<MapTileChangeSnapshot>("mapTileChanged", tileChanges.Enqueue);
-        second.On<MapTileChangeSnapshot>("mapTileChanged", tileChanges.Enqueue);
-        first.On<PlayerSnapshot>("updatePlayerState", updates.Enqueue);
-        second.On<PlayerSnapshot>("updatePlayerState", updates.Enqueue);
+        first.On<PowerupSnapshot>("powerupSpawned", value => spawned.Writer.TryWrite(value));
+        second.On<PowerupSnapshot>("powerupSpawned", value => spawned.Writer.TryWrite(value));
+        first.On<PowerupCollectedSnapshot>("powerupCollected", value => collected.Writer.TryWrite(value));
+        second.On<PowerupCollectedSnapshot>("powerupCollected", value => collected.Writer.TryWrite(value));
+        first.On<MapTileChangeSnapshot>("mapTileChanged", value => tileChanges.Writer.TryWrite(value));
+        second.On<MapTileChangeSnapshot>("mapTileChanged", value => tileChanges.Writer.TryWrite(value));
+        first.On<PlayerSnapshot>("updatePlayerState", value => updates.Writer.TryWrite(value));
+        second.On<PlayerSnapshot>("updatePlayerState", value => updates.Writer.TryWrite(value));
         first.On<PlayerSnapshot>("initializePlayer", player => firstInitialized.TrySetResult(player));
         second.On<PlayerSnapshot>("initializePlayer", player => secondInitialized.TrySetResult(player));
 
@@ -283,7 +283,7 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
     }
 
     private static async Task<T> WaitForQueueAsync<T>(
-        ConcurrentQueue<T> queue,
+        Channel<T> channel,
         Func<T, bool> predicate,
         TimeSpan? timeout = null)
     {
@@ -291,18 +291,15 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
 
         try
         {
-            while (true)
+            await foreach (var value in channel.Reader.ReadAllAsync(cts.Token))
             {
-                while (queue.TryDequeue(out var value))
+                if (predicate(value))
                 {
-                    if (predicate(value))
-                    {
-                        return value;
-                    }
+                    return value;
                 }
-
-                await Task.Delay(10, cts.Token);
             }
+
+            throw new TimeoutException("The expected SignalR event was not received.");
         }
         catch (OperationCanceledException) when (cts.IsCancellationRequested)
         {

@@ -37,17 +37,19 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
             CreateInput(2, Keys.RIGHT)
         });
 
-        var moving = await WaitForUpdateAsync(
+        var moving = await WaitForQueueAsync(
             updates,
-            player => player.LastProcessed == 2 && player.ExactX > initial.ExactX);
+            player => player.LastProcessed == 2 && player.ExactX > initial.ExactX,
+            TimeSpan.FromSeconds(5));
 
         Assert.Equal(1, moving.DirectionX);
 
         await connection.SendAsync("SendKeys", new[] { CreateInput(3) });
 
-        var stopped = await WaitForUpdateAsync(
+        var stopped = await WaitForQueueAsync(
             updates,
-            player => player.LastProcessed == 3 && player.DirectionX == 0 && player.DirectionY == 0);
+            player => player.LastProcessed == 3 && player.DirectionX == 0 && player.DirectionY == 0,
+            TimeSpan.FromSeconds(5));
 
         Assert.Equal(moving.ExactX, stopped.ExactX);
     }
@@ -280,48 +282,32 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         return new KeyboardState(keyState, id, 0);
     }
 
-    private static async Task<PlayerSnapshot> WaitForUpdateAsync(
-        ConcurrentQueue<PlayerSnapshot> updates,
-        Func<PlayerSnapshot, bool> predicate)
-    {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-
-        while (!timeout.IsCancellationRequested)
-        {
-            while (updates.TryDequeue(out var update))
-            {
-                if (predicate(update))
-                {
-                    return update;
-                }
-            }
-
-            await Task.Delay(10, timeout.Token);
-        }
-
-        throw new TimeoutException("The expected authoritative player update was not received.");
-    }
-
     private static async Task<T> WaitForQueueAsync<T>(
         ConcurrentQueue<T> queue,
-        Func<T, bool> predicate)
+        Func<T, bool> predicate,
+        TimeSpan? timeout = null)
     {
-        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        using var cts = new CancellationTokenSource(timeout ?? TimeSpan.FromSeconds(10));
 
-        while (!timeout.IsCancellationRequested)
+        try
         {
-            while (queue.TryDequeue(out var value))
+            while (true)
             {
-                if (predicate(value))
+                while (queue.TryDequeue(out var value))
                 {
-                    return value;
+                    if (predicate(value))
+                    {
+                        return value;
+                    }
                 }
+
+                await Task.Delay(10, cts.Token);
             }
-
-            await Task.Delay(10, timeout.Token);
         }
-
-        throw new TimeoutException("The expected SignalR event was not received.");
+        catch (OperationCanceledException) when (cts.IsCancellationRequested)
+        {
+            throw new TimeoutException("The expected SignalR event was not received.");
+        }
     }
 
     private sealed class PlayerSnapshot

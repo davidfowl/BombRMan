@@ -26,6 +26,16 @@ public class GameServer : Hub
         await Clients.Caller.SendAsync("initializeBombs", _gameState.Bombs);
         await Clients.Caller.SendAsync("initializeExplosions", _gameState.Explosions);
         await Clients.Caller.SendAsync("initializePowerups", _gameState.Powerups);
+
+        if (_gameState.RoundState == RoundState.InProgress)
+        {
+            await Clients.Caller.SendAsync("roundStarted");
+        }
+        else if (_gameState.RoundState == RoundState.RoundOver)
+        {
+            var winner = _gameState.ActivePlayers.SingleOrDefault(player => player.IsAlive);
+            await Clients.Caller.SendAsync("roundOver", new { WinnerIndex = winner?.Index });
+        }
     }
 
     public void SendKeys(KeyboardState[] inputs)

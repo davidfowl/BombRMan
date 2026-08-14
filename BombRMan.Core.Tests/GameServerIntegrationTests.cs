@@ -55,6 +55,31 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
     }
 
     [Fact]
+    public async Task ClientJoiningMidRoundReceivesCurrentRoundState()
+    {
+        await using var factory = _factory.WithWebHostBuilder(_ => { });
+        await using var first = CreateConnection(factory);
+        await using var second = CreateConnection(factory);
+        await using var joining = CreateConnection(factory);
+        var initialRoundStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+        var joiningRoundStarted = new TaskCompletionSource(
+            TaskCreationOptions.RunContinuationsAsynchronously);
+
+        first.On("roundStarted", () => initialRoundStarted.TrySetResult());
+        second.On("roundStarted", () => initialRoundStarted.TrySetResult());
+        joining.On("roundStarted", () => joiningRoundStarted.TrySetResult());
+
+        await first.StartAsync();
+        await second.StartAsync();
+        await initialRoundStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+
+        await joining.StartAsync();
+
+        await joiningRoundStarted.Task.WaitAsync(TimeSpan.FromSeconds(5));
+    }
+
+    [Fact]
     public async Task RoundResetBroadcastReplacesClientStateAtomically()
     {
         await using var first = CreateConnection();

@@ -25,16 +25,16 @@ public class GameState
     private const int POWERUP_SPAWN_PERCENT = 40;
     private const int MIN_PLAYERS_TO_START = 2;
 
-    static string _mapData = "222222222222222" +
+    private static readonly string _mapData = "222222222222222" +
                              "200000000000002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
-                             "200000000000002" +
+                             "203000300030002" +
                              "202020202020202" +
                              "200000000000002" +
                              "222222222222222";
@@ -48,7 +48,9 @@ public class GameState
     private readonly ILogger<GameState> _logger;
     private readonly Thread _gameLoopThread;
     private readonly ManualResetEventSlim _gameLoopStopped = new(initialState: false);
+    private readonly object _lifecycleBroadcastLock = new();
     private readonly Random _random = new();
+    private readonly Func<int, int> _randomNext;
 
     // Bombs/explosions/powerups are only ever mutated from the single game loop thread inside
     // Update(), so no additional synchronization is required for these collections.
@@ -64,12 +66,18 @@ public class GameState
     private int _tickOverruns;
     private int _maxObservedDeltaMs;
     private int _maxQueueDepth;
+    private Task _lastLifecycleBroadcast = Task.CompletedTask;
 
-    public GameState(IHubContext<GameServer> hubContext, IHostApplicationLifetime hostApplicationLifetime, ILogger<GameState> logger)
+    public GameState(
+        IHubContext<GameServer> hubContext,
+        IHostApplicationLifetime hostApplicationLifetime,
+        ILogger<GameState> logger,
+        Func<int, int> randomNext = null)
     {
         _hubContext = hubContext;
         _hostApplicationLifetime = hostApplicationLifetime;
         _logger = logger;
+        _randomNext = randomNext ?? _random.Next;
 
         _gameLoopThread = new Thread(_ => RunGameLoop())
         {
@@ -473,13 +481,13 @@ public class GameState
 
                 _ = _hubContext.Clients.All.SendAsync("mapTileChanged", new MapTileChange { X = tile.X, Y = tile.Y, Tile = Tile.GRASS });
 
-                if (_random.Next(100) < POWERUP_SPAWN_PERCENT)
+                if (BombLogic.ShouldSpawnPowerup(_randomNext(100), POWERUP_SPAWN_PERCENT))
                 {
                     var powerup = new Powerup
                     {
                         X = tile.X,
                         Y = tile.Y,
-                        Type = (PowerupType)_random.Next(3),
+                        Type = (PowerupType)_randomNext(3),
                     };
 
                     _powerups.Add(powerup);
@@ -504,7 +512,7 @@ public class GameState
                 {
                     player.IsAlive = false;
 
-                    _ = _hubContext.Clients.All.SendAsync("playerEliminated", player);
+                    QueueLifecycleBroadcast("playerEliminated", player);
                 }
             }
 
@@ -545,7 +553,7 @@ public class GameState
                 if (players.Length >= MIN_PLAYERS_TO_START)
                 {
                     RoundState = RoundState.InProgress;
-                    _ = _hubContext.Clients.All.SendAsync("roundStarted");
+                    QueueLifecycleBroadcast("roundStarted");
                 }
                 break;
 
@@ -555,7 +563,7 @@ public class GameState
                     RoundState = RoundState.RoundOver;
                     _roundResetTicksRemaining = ROUND_RESET_DELAY_TICKS;
 
-                    _ = _hubContext.Clients.All.SendAsync("roundOver", new RoundOver { WinnerIndex = winner?.Index });
+                    QueueLifecycleBroadcast("roundOver", new RoundOver { WinnerIndex = winner?.Index });
                 }
                 break;
 
@@ -570,6 +578,17 @@ public class GameState
 
     private void ResetRound()
     {
+        // Intentional sync-over-async: ResetRound only ever runs on the dedicated,
+        // non-thread-pool game-loop thread (see RunGameLoop), which has no
+        // SynchronizationContext to deadlock on. Blocking here guarantees any
+        // in-flight roundOver/playerEliminated broadcast fully lands before we
+        // mutate state and queue roundReset, preventing clients from observing a
+        // reset out of order with the prior lifecycle event (see the reset-race
+        // fix in QueueLifecycleBroadcast/SendLifecycleBroadcastAsync). A slow
+        // client send can stall a tick, but that's already surfaced via
+        // _tickOverruns rather than silently hidden.
+        _lastLifecycleBroadcast.GetAwaiter().GetResult();
+
         _map.Reset();
         _bombs.Clear();
         _explosions.Clear();
@@ -594,12 +613,33 @@ public class GameState
 
         RoundState = ActivePlayers.Length >= MIN_PLAYERS_TO_START ? RoundState.InProgress : RoundState.WaitingForPlayers;
 
-        _ = _hubContext.Clients.All.SendAsync("initializeMap", _map.RawData);
-        _ = _hubContext.Clients.All.SendAsync("initialize", ActivePlayers);
-
-        if (RoundState == RoundState.InProgress)
+        QueueLifecycleBroadcast("roundReset", new RoundReset
         {
-            _ = _hubContext.Clients.All.SendAsync("roundStarted");
+            Map = _map.RawData,
+            Players = ActivePlayers,
+            RoundState = RoundState.ToString()
+        });
+    }
+
+    private void QueueLifecycleBroadcast(string method, object argument = null)
+    {
+        lock (_lifecycleBroadcastLock)
+        {
+            _lastLifecycleBroadcast = SendLifecycleBroadcastAsync(_lastLifecycleBroadcast, method, argument);
+        }
+    }
+
+    private async Task SendLifecycleBroadcastAsync(Task previous, string method, object argument)
+    {
+        await previous;
+
+        if (argument is null)
+        {
+            await _hubContext.Clients.All.SendAsync(method);
+        }
+        else
+        {
+            await _hubContext.Clients.All.SendAsync(method, argument);
         }
     }
 
@@ -640,6 +680,13 @@ public class GameState
     class RoundOver
     {
         public int? WinnerIndex { get; set; }
+    }
+
+    class RoundReset
+    {
+        public string Map { get; set; }
+        public ImmutableArray<Player> Players { get; set; }
+        public string RoundState { get; set; }
     }
 
     /// <summary>

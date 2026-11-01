@@ -9,7 +9,7 @@ runtime architecture, how to run the project locally, and known gaps.
 |---|---|
 | Server | ASP.NET Core (`net10.0`, `Microsoft.NET.Sdk.Web`) |
 | Realtime transport | ASP.NET Core SignalR (`/game` hub) |
-| Client | Static HTML/CSS/vanilla JS + jQuery/jQuery UI 1.8, `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
+| Client | Static HTML/CSS/vanilla JS (no framework dependency), `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
 | Tests | xUnit-style test project (`BombRMan.Core.Tests`), 51 tests covering game rules, networking glue, and diagnostics |
 | Solution | `BombRMan.slnx` (new-style `.slnx` solution file), SDK pinned via `global.json` (10.0.301) |
 
@@ -150,9 +150,9 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 4. **No live diagnostics endpoint.** `GameState` tracks internal counters
    (updates/sec, inputs/sec, dropped inputs, tick overruns — see
    `GameStateDiagnosticsTests`) but nothing surfaces them over HTTP yet.
-5. **Client is a 2012-era jQuery UI static page.** Functional, but a strong
-   candidate for a minimal modern rewrite (vanilla JS/Canvas) that preserves
-   the existing SignalR contract.
+5. **Client is a static page.** It's plain vanilla JS/Canvas (no framework
+   dependency as of M3) but still a single hand-rolled `index.htm` with no
+   build step, bundler, or component model.
 6. **No baseline README/CONTRIBUTING docs** prior to this change.
 7. **Single-process, single-game-state multiplayer.** Everyone who connects to
    the one running server shares a single `GameState` instance/round — there's

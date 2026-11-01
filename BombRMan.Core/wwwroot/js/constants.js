@@ -1,4 +1,4 @@
-(function($, window) {
+(function (window) {
 
 window.Game = {};
 
@@ -44,4 +44,4 @@ window.Game.Debugging = false;
 window.Game.MoveSprites = true;
 
 
-})(jQuery, window);
+})(window);

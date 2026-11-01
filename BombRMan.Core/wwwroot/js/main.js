@@ -1,4 +1,4 @@
-(function ($, window) {
+(function (window) {
 
     var requestAnimFrame = (function () {
         // Easier for debugging can change the fps dynamically
@@ -12,7 +12,15 @@
         };
     })();
 
-    $(function () {
+    function ready(fn) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', fn);
+        } else {
+            fn();
+        }
+    }
+
+    ready(function () {
         var canvas = document.getElementById('canvas');
         var context = canvas.getContext('2d');
         var assetManager = new window.Game.AssetManager();
@@ -27,19 +35,36 @@
 
         animate(engine, renderer, canvas, context);
 
-        $(document).keydown(function (e) {
+        document.addEventListener('keydown', function (e) {
             if (engine.onKeydown(e)) {
                 e.preventDefault();
                 return false;
             }
         });
 
-        $(document).keyup(function (e) {
+        document.addEventListener('keyup', function (e) {
             if (engine.onKeyup(e)) {
                 e.preventDefault();
                 return false;
             }
         });
+
+        var fpsSlider = document.getElementById('fps-slider');
+        var fpsValue = document.getElementById('fps-value');
+
+        if (fpsSlider) {
+            fpsSlider.value = window.Game.TicksPerSecond;
+            if (fpsValue) {
+                fpsValue.textContent = fpsSlider.value;
+            }
+
+            fpsSlider.addEventListener('input', function () {
+                window.Game.TicksPerSecond = Number(fpsSlider.value);
+                if (fpsValue) {
+                    fpsValue.textContent = fpsSlider.value;
+                }
+            });
+        }
     });
 
     function animate(engine, renderer, canvas, context) {
@@ -58,4 +83,4 @@
         });
     }
 
-})(jQuery, window);
+})(window);

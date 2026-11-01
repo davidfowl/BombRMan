@@ -1,0 +1,9 @@
+{
+  "name": "bombrman-client-tests",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Framework-free Node unit tests for the pure client-side logic in BombRMan.Core/wwwroot/js.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

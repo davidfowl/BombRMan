@@ -138,7 +138,7 @@ that one process, not multiple server processes.
 These are the gaps between what exists today and a fully polished, easily
 runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
-1. **No .NET Aspire AppHost.** There's no single-command way to orchestrate the
+1. **No Aspire AppHost.** There's no single-command way to orchestrate the
    server (and, longer-term, any additional services such as a second game
    server instance, Redis-backed backplane for multi-instance SignalR, etc.)
    for local dev/debugging. This is the primary new milestone this baseline

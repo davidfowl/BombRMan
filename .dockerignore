@@ -1,0 +1,10 @@
+**/bin/
+**/obj/
+.git/
+.gitignore
+.vscode/
+.github/
+*.md
+!README.md
+.dockerignore
+Dockerfile

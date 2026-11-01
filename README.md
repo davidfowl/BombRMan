@@ -12,6 +12,9 @@ whatever is already in progress.
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a full breakdown of the tech
 stack, project layout, networking/game-loop design, and known gaps.
 
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for running the game in a Docker
+container.
+
 ## Requirements
 
 - .NET SDK matching [`global.json`](global.json) (10.0.301; `rollForward:

@@ -502,21 +502,19 @@ public class GameState
 
     private void UpdateExplosions()
     {
+        // Resolve every player standing on any currently-live explosion tile as a single batch,
+        // so two players caught by different bombs on the same tick are eliminated together
+        // (simultaneous elimination) rather than depending on which explosion is iterated first.
+        foreach (var player in BombLogic.GetEliminatedPlayers(ActivePlayers, _explosions))
+        {
+            player.IsAlive = false;
+
+            QueueLifecycleBroadcast("playerEliminated", player);
+        }
+
         for (int i = _explosions.Count - 1; i >= 0; i--)
         {
-            var explosion = _explosions[i];
-
-            foreach (var player in ActivePlayers)
-            {
-                if (player.IsAlive && player.X == explosion.X && player.Y == explosion.Y)
-                {
-                    player.IsAlive = false;
-
-                    QueueLifecycleBroadcast("playerEliminated", player);
-                }
-            }
-
-            if (explosion.Tick())
+            if (_explosions[i].Tick())
             {
                 _explosions.RemoveAt(i);
             }
@@ -529,16 +527,12 @@ public class GameState
         {
             var powerup = _powerups[i];
 
-            foreach (var player in ActivePlayers)
+            if (BombLogic.TryCollectPowerup(ActivePlayers, powerup, out var player))
             {
-                if (player.IsAlive && player.X == powerup.X && player.Y == powerup.Y)
-                {
-                    BombLogic.ApplyPowerup(player, powerup.Type);
-                    _powerups.RemoveAt(i);
+                BombLogic.ApplyPowerup(player, powerup.Type);
+                _powerups.RemoveAt(i);
 
-                    _ = _hubContext.Clients.All.SendAsync("powerupCollected", new PowerupCollected { PlayerIndex = player.Index, Type = powerup.Type, X = powerup.X, Y = powerup.Y });
-                    break;
-                }
+                _ = _hubContext.Clients.All.SendAsync("powerupCollected", new PowerupCollected { PlayerIndex = player.Index, Type = powerup.Type, X = powerup.X, Y = powerup.Y });
             }
         }
     }

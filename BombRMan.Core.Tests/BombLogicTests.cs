@@ -298,6 +298,163 @@ public class BombLogicTests
     }
 
     [Fact]
+    public void CanPlaceBombRejectsCoordinatesOutsideTheMapBounds()
+    {
+        var player = CreatePlayer(1, 1);
+        var map = CreateOpenMap();
+
+        // (-1, 1) and (map.Width, 1) are both off the edge of the 7-wide map entirely (not just a
+        // wall tile), exercising Map.Movable's bounds check rather than its tile-type check.
+        Assert.False(BombLogic.CanPlaceBomb(player, map, -1, 1, new List<Bomb>()));
+        Assert.False(BombLogic.CanPlaceBomb(player, map, map.Width, 1, new List<Bomb>()));
+        Assert.False(BombLogic.CanPlaceBomb(player, map, 1, -1, new List<Bomb>()));
+        Assert.False(BombLogic.CanPlaceBomb(player, map, 1, map.Height, new List<Bomb>()));
+    }
+
+    [Fact]
+    public void GetBlastTilesWithZeroPowerReturnsOnlyTheOriginTile()
+    {
+        var map = CreateOpenMap();
+
+        var tiles = ExplosionCalculator.GetBlastTiles(map, 1, 1, 0);
+
+        Assert.Equal(new[] { new System.Drawing.Point(1, 1) }, tiles);
+    }
+
+    [Fact]
+    public void GetBlastTilesStaysInBoundsWhenMapHasNoWallBorder()
+    {
+        // A map with no surrounding wall row/column at all; a bomb placed in the corner with
+        // enough power to blast past every edge must not walk off the backing array.
+        var map = new Map("000" + "000" + "000", 3, 3, 32);
+
+        var tiles = ExplosionCalculator.GetBlastTiles(map, 0, 0, 10);
+
+        Assert.All(tiles, p => Assert.InRange(p.X, 0, map.Width - 1));
+        Assert.All(tiles, p => Assert.InRange(p.Y, 0, map.Height - 1));
+        Assert.Contains(tiles, p => p.X == 2 && p.Y == 0);
+        Assert.Contains(tiles, p => p.X == 0 && p.Y == 2);
+    }
+
+    [Fact]
+    public void IsRoundOverReturnsFalseWithNoPlayers()
+    {
+        Assert.False(BombLogic.IsRoundOver(new List<Player>(), out var winner));
+        Assert.Null(winner);
+    }
+
+    [Fact]
+    public void IsRoundOverHandlesSimultaneousEliminationLeavingExactlyOneSurvivorAmongThreePlayers()
+    {
+        var survivor = CreatePlayer(1, 1, 0);
+        var eliminatedA = CreatePlayer(2, 2, 1);
+        eliminatedA.IsAlive = false;
+        var eliminatedB = CreatePlayer(3, 3, 2);
+        eliminatedB.IsAlive = false;
+        var players = new List<Player> { survivor, eliminatedA, eliminatedB };
+
+        Assert.True(BombLogic.IsRoundOver(players, out var winner));
+        Assert.Same(survivor, winner);
+    }
+
+    [Fact]
+    public void IsRoundOverReturnsDrawWhenAllThreePlayersAreSimultaneouslyEliminated()
+    {
+        var players = new List<Player>
+        {
+            CreatePlayer(1, 1, 0),
+            CreatePlayer(2, 2, 1),
+            CreatePlayer(3, 3, 2),
+        };
+
+        foreach (var player in players)
+        {
+            player.IsAlive = false;
+        }
+
+        Assert.True(BombLogic.IsRoundOver(players, out var winner));
+        Assert.Null(winner);
+    }
+
+    [Fact]
+    public void GetEliminatedPlayersReturnsEveryPlayerCaughtByADifferentSimultaneousExplosion()
+    {
+        var hitA = CreatePlayer(2, 1, 0);
+        var hitB = CreatePlayer(4, 1, 1);
+        var untouched = CreatePlayer(1, 3, 2);
+        var players = new List<Player> { hitA, hitB, untouched };
+        var explosions = new List<Explosion>
+        {
+            new() { X = 2, Y = 1, TicksRemaining = 5 },
+            new() { X = 4, Y = 1, TicksRemaining = 5 },
+        };
+
+        var eliminated = BombLogic.GetEliminatedPlayers(players, explosions);
+
+        Assert.Equal(new[] { hitA, hitB }, eliminated);
+    }
+
+    [Fact]
+    public void GetEliminatedPlayersIgnoresPlayersAlreadyDead()
+    {
+        var alreadyDead = CreatePlayer(2, 1, 0);
+        alreadyDead.IsAlive = false;
+        var players = new List<Player> { alreadyDead };
+        var explosions = new List<Explosion> { new() { X = 2, Y = 1, TicksRemaining = 5 } };
+
+        var eliminated = BombLogic.GetEliminatedPlayers(players, explosions);
+
+        Assert.Empty(eliminated);
+    }
+
+    [Fact]
+    public void GetEliminatedPlayersReturnsEmptyWhenThereAreNoExplosions()
+    {
+        var players = new List<Player> { CreatePlayer(2, 1, 0) };
+
+        var eliminated = BombLogic.GetEliminatedPlayers(players, new List<Explosion>());
+
+        Assert.Empty(eliminated);
+    }
+
+    [Fact]
+    public void TryCollectPowerupGivesItToTheFirstAlivePlayerWhenTwoPlayersRaceToTheSameTile()
+    {
+        // Both players occupy the powerup's tile on the same tick (a collection race). Only the
+        // first alive player in iteration order should be reported as the collector.
+        var first = CreatePlayer(2, 1, 0);
+        var second = CreatePlayer(2, 1, 1);
+        var players = new List<Player> { first, second };
+        var powerup = new Powerup { X = 2, Y = 1, Type = PowerupType.SPEED };
+
+        Assert.True(BombLogic.TryCollectPowerup(players, powerup, out var collector));
+        Assert.Same(first, collector);
+    }
+
+    [Fact]
+    public void TryCollectPowerupSkipsDeadPlayersStandingOnTheTile()
+    {
+        var dead = CreatePlayer(2, 1, 0);
+        dead.IsAlive = false;
+        var alive = CreatePlayer(2, 1, 1);
+        var players = new List<Player> { dead, alive };
+        var powerup = new Powerup { X = 2, Y = 1, Type = PowerupType.SPEED };
+
+        Assert.True(BombLogic.TryCollectPowerup(players, powerup, out var collector));
+        Assert.Same(alive, collector);
+    }
+
+    [Fact]
+    public void TryCollectPowerupReturnsFalseWhenNoPlayerIsOnTheTile()
+    {
+        var players = new List<Player> { CreatePlayer(1, 1, 0) };
+        var powerup = new Powerup { X = 5, Y = 3, Type = PowerupType.SPEED };
+
+        Assert.False(BombLogic.TryCollectPowerup(players, powerup, out var collector));
+        Assert.Null(collector);
+    }
+
+    [Fact]
     public void ResolveChainReactionDoesNotChainThroughAWall()
     {
         // Wall at (2,1) sits between the two bombs, so the blast cannot reach the second bomb.

@@ -9,4 +9,8 @@
     <InternalsVisibleTo Include="BombRMan.Core.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\BombRMan.ServiceDefaults\BombRMan.ServiceDefaults.csproj" />
+  </ItemGroup>
+
 </Project>

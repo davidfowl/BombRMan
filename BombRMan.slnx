@@ -4,6 +4,8 @@
     <Platform Name="Mixed Platforms" />
     <Platform Name="x86" />
   </Configurations>
+  <Project Path="BombRMan.AppHost/BombRMan.AppHost.csproj" />
   <Project Path="BombRMan.Core.Tests/BombRMan.Core.Tests.csproj" />
   <Project Path="BombRMan.Core/BombRMan.Core.csproj" />
+  <Project Path="BombRMan.ServiceDefaults/BombRMan.ServiceDefaults.csproj" />
 </Solution>

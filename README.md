@@ -19,6 +19,26 @@ stack, project layout, networking/game-loop design, and known gaps.
 
 ## Running it locally
 
+### Option A: .NET Aspire AppHost (recommended)
+
+The `BombRMan.AppHost` project orchestrates the game server via .NET Aspire and
+surfaces it in the Aspire dashboard with health/resource status, logs, and traces.
+
+```bash
+dotnet run --project BombRMan.AppHost/BombRMan.AppHost.csproj
+```
+
+This prints a dashboard URL (e.g. `https://localhost:17266`, with a login
+token) and starts the `bombrman-server` resource. Open the dashboard, click
+into the `bombrman-server` resource to find its external HTTP endpoint, and
+open that URL in two or more browser tabs/windows to play a local multiplayer
+round (at least 2 connected players are required for a round to start).
+
+If you have the [Aspire CLI](https://aspire.dev) installed, `aspire run` from
+the repo root works too.
+
+### Option B: run the server directly
+
 ```bash
 # restore + build everything
 dotnet build BombRMan.slnx
@@ -49,11 +69,11 @@ Arrow keys to move, and the bomb-placement key defined in
 ## Project status
 
 This project already has a working server-authoritative game loop, full bomb/
-explosion/powerup/round rules with unit test coverage, and client-side input
-prediction. The active roadmap (CI, Docker, diagnostics endpoint, client
-modernization, and a .NET Aspire AppHost for one-command local orchestration)
-is tracked in the repository's GitHub issues — see the pinned roadmap tracking
-issue.
+explosion/powerup/round rules with unit test coverage, client-side input
+prediction, and a .NET Aspire AppHost for one-command local orchestration.
+The rest of the active roadmap (CI, Docker, diagnostics endpoint, client
+modernization) is tracked in the repository's GitHub issues — see the pinned
+roadmap tracking issue.
 
 ## Contributing
 

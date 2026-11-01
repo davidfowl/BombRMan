@@ -7,22 +7,27 @@ runtime architecture, how to run the project locally, and known gaps.
 
 | Layer | Technology |
 |---|---|
+| Orchestration | .NET Aspire AppHost (`BombRMan.AppHost`), `Aspire.ServiceDefaults` (OpenTelemetry, health checks, service discovery) |
 | Server | ASP.NET Core (`net10.0`, `Microsoft.NET.Sdk.Web`) |
 | Realtime transport | ASP.NET Core SignalR (`/game` hub) |
 | Client | Static HTML/CSS/vanilla JS + jQuery/jQuery UI 1.8, `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
 | Tests | xUnit-style test project (`BombRMan.Core.Tests`), 51 tests covering game rules, networking glue, and diagnostics |
 | Solution | `BombRMan.slnx` (new-style `.slnx` solution file), SDK pinned via `global.json` (10.0.301) |
 
-There is currently **no .NET Aspire AppHost**, **no CI workflow**, **no Dockerfile**,
-and **no top-level README** — see "Known gaps" below.
+There is currently **no CI workflow** and **no Dockerfile** — see "Known gaps"
+below.
 
 ## Project layout
 
 ```
 BombRMan.slnx                      # Solution (.slnx format)
 global.json                        # Pins .NET SDK 10.0.301
+BombRMan.AppHost/                  # .NET Aspire AppHost: orchestrates BombRMan.Core, dashboard
+  AppHost.cs                       # Declares the bombrman-server project resource
+BombRMan.ServiceDefaults/          # Shared Aspire service-defaults (OTel, health checks, service discovery)
+  Extensions.cs                    # AddServiceDefaults()/MapDefaultEndpoints() extension methods
 BombRMan.Core/                     # ASP.NET Core server + static client assets
-  Program.cs                       # Minimal hosting: SignalR + static file server
+  Program.cs                       # Minimal hosting: service defaults + SignalR + static file server
   Hubs/                            # All game logic and the SignalR hub
     GameServer.cs                  # SignalR Hub: connect/disconnect, SendKeys RPC
     GameState.cs                   # Server-authoritative game loop (singleton, background thread)
@@ -109,55 +114,80 @@ spinning up SignalR or a background thread:
 a delay (`ROUND_RESET_DELAY_TICKS`), restoring the map and respawning players at
 their initial positions.
 
+### Local orchestration: .NET Aspire AppHost
+
+`BombRMan.AppHost` is a .NET Aspire AppHost project that wires `BombRMan.Core` in
+as a single project resource (`bombrman-server`) with an external HTTP endpoint.
+Running the AppHost starts the Aspire dashboard (resource list, logs, traces,
+health status) and launches the game server underneath it — `BombRMan.Core`
+itself picks up `Aspire.ServiceDefaults` (`AddServiceDefaults()` /
+`MapDefaultEndpoints()`) for OpenTelemetry export, resilience/service-discovery
+defaults, and the standard `/health` and `/alive` health-check endpoints, all
+visible in the dashboard. This is additive: running `BombRMan.Core` directly
+with `dotnet run` (no AppHost) still works exactly as before.
+
 ## How to run it today
 
 Requirements: .NET SDK matching `global.json` (10.0.301, `rollForward:
 latestFeature` so any 10.0.3xx SDK works).
 
 ```bash
-# restore + build
+# restore + build everything, including the AppHost and ServiceDefaults projects
 dotnet build BombRMan.slnx
-
-# run the server (serves both the SignalR hub and the static client from wwwroot)
-dotnet run --project BombRMan.Core/BombRMan.Core.csproj
-# -> open the printed localhost URL in two or more browser tabs to play locally
 
 # run the test suite
 dotnet test BombRMan.slnx
 ```
 
+### Via the Aspire AppHost (recommended)
+
+```bash
+dotnet run --project BombRMan.AppHost/BombRMan.AppHost.csproj
+# or, with the Aspire CLI installed: aspire run
+```
+
+This prints an Aspire dashboard URL (with a login token). Open it, find the
+`bombrman-server` resource's external HTTP endpoint, and open that URL in two
+or more browser tabs to play a local multiplayer round.
+
+### Directly (no AppHost)
+
+```bash
+dotnet run --project BombRMan.Core/BombRMan.Core.csproj
+# -> open the printed localhost URL in two or more browser tabs to play locally
+```
+
 VS Code users can use the provided `.vscode/launch.json` (F5) and
 `.vscode/tasks.json` (`build`/`publish`/`watch`) instead.
 
-There is currently one process serving everything (HTTP + SignalR + static
-files); "multiplayer" today means multiple browser tabs/clients connecting to
-that one process, not multiple server processes.
+There is currently one game-server process serving everything (HTTP + SignalR +
+static files), whether launched via the AppHost or directly; "multiplayer"
+today means multiple browser tabs/clients connecting to that one process, not
+multiple server processes.
 
 ## Known gaps
 
 These are the gaps between what exists today and a fully polished, easily
 runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
-1. **No Aspire AppHost.** There's no single-command way to orchestrate the
-   server (and, longer-term, any additional services such as a second game
-   server instance, Redis-backed backplane for multi-instance SignalR, etc.)
-   for local dev/debugging. This is the primary new milestone this baseline
-   adds to the roadmap.
-2. **No CI.** No `.github/workflows`, so builds/tests aren't verified
+1. **No CI.** No `.github/workflows`, so builds/tests aren't verified
    automatically on PRs.
-3. **No containerization.** No `Dockerfile`, so there's no reproducible
+2. **No containerization.** No `Dockerfile`, so there's no reproducible
    deployment artifact.
-4. **No live diagnostics endpoint.** `GameState` tracks internal counters
+3. **No live diagnostics endpoint.** `GameState` tracks internal counters
    (updates/sec, inputs/sec, dropped inputs, tick overruns — see
    `GameStateDiagnosticsTests`) but nothing surfaces them over HTTP yet.
-5. **Client is a 2012-era jQuery UI static page.** Functional, but a strong
+4. **Client is a 2012-era jQuery UI static page.** Functional, but a strong
    candidate for a minimal modern rewrite (vanilla JS/Canvas) that preserves
    the existing SignalR contract.
-6. **No baseline README/CONTRIBUTING docs** prior to this change.
-7. **Single-process, single-game-state multiplayer.** Everyone who connects to
+5. **No baseline CONTRIBUTING docs** prior to this change.
+6. **Single-process, single-game-state multiplayer.** Everyone who connects to
    the one running server shares a single `GameState` instance/round — there's
    no matchmaking, multiple concurrent rooms, or horizontal scale-out (would
-   need a SignalR backplane if that's ever a goal).
+   need a SignalR backplane if that's ever a goal). The AppHost currently
+   orchestrates one `bombrman-server` resource; adding a second resource (e.g.
+   Redis for a SignalR backplane) is a natural next step if scale-out becomes
+   a goal, but is out of scope for this milestone.
 
 ## Testing
 

@@ -69,4 +69,6 @@ issue.
 ## Contributing
 
 Issues and PRs welcome. Please make sure `dotnet build BombRMan.slnx` and
-`dotnet test BombRMan.slnx` pass before opening a PR.
+`dotnet test BombRMan.slnx` pass before opening a PR. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, coding, and testing
+guidelines.

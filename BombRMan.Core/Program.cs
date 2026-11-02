@@ -2,6 +2,8 @@ using BombRMan.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services.AddSignalR(o =>
 {
     o.EnableDetailedErrors = builder.Environment.IsDevelopment();
@@ -14,6 +16,8 @@ builder.Services.AddSignalR(o =>
 builder.Services.AddSingleton<GameState>();
 
 var app = builder.Build();
+
+app.MapDefaultEndpoints();
 
 app.UseFileServer();
 app.UseRouting();

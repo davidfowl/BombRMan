@@ -68,6 +68,11 @@ public class GameState
     private int _maxQueueDepth;
     private Task _lastLifecycleBroadcast = Task.CompletedTask;
 
+    // Reused/overwritten once per second by ServerStatsTimer. Exposed read-only via
+    // LatestStats for the /diagnostics endpoint; readers may observe a value that's
+    // momentarily being updated, which is acceptable for a best-effort diagnostics snapshot.
+    private readonly ServerStats _latestStats = new();
+
     public GameState(
         IHubContext<GameServer> hubContext,
         IHostApplicationLifetime hostApplicationLifetime,
@@ -140,7 +145,7 @@ public class GameState
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(1));
 
         // Reuse this for stats
-        var serverStats = new ServerStats();
+        var serverStats = _latestStats;
 
         while (await timer.WaitForNextTickAsync())
         {
@@ -192,6 +197,73 @@ public class GameState
     public IReadOnlyList<Explosion> Explosions => _explosions;
 
     public IReadOnlyList<Powerup> Powerups => _powerups;
+
+    /// <summary>
+    /// Latest per-second server stats computed by <see cref="ServerStatsTimer"/>. Updated in
+    /// place once a second; see the field comment for the consistency tradeoff.
+    /// </summary>
+    public ServerStats LatestStats => _latestStats;
+
+    /// <summary>
+    /// Builds a point-in-time snapshot of the live round/player/bomb/explosion/powerup state,
+    /// intended for the <c>/diagnostics</c> endpoint. Safe to call from any thread; reads the
+    /// same collections the game loop mutates without additional locking, consistent with how
+    /// <see cref="ActivePlayers"/>/<see cref="Bombs"/>/<see cref="Explosions"/>/<see cref="Powerups"/>
+    /// are already read cross-thread elsewhere (e.g. from tests).
+    /// </summary>
+    public DiagnosticsSnapshot GetDiagnosticsSnapshot()
+    {
+        var players = ActivePlayers;
+        var playerDiagnostics = new PlayerDiagnostics[players.Length];
+        for (int i = 0; i < players.Length; i++)
+        {
+            var player = players[i];
+            playerDiagnostics[i] = new PlayerDiagnostics
+            {
+                Index = player.Index,
+                X = player.X,
+                Y = player.Y,
+                ExactX = player.ExactX,
+                ExactY = player.ExactY,
+                Direction = player.Direction.ToString(),
+                IsAlive = player.IsAlive,
+                MaxBombs = player.MaxBombs,
+                ActiveBombs = player.ActiveBombs,
+                PowerLevel = player.PowerLevel,
+                Speed = player.Speed,
+                LastProcessed = player.LastProcessed,
+            };
+        }
+
+        return new DiagnosticsSnapshot
+        {
+            TimestampUtc = DateTimeOffset.UtcNow,
+            RoundState = RoundState.ToString(),
+            Map = new MapDiagnostics
+            {
+                Width = _map.Width,
+                Height = _map.Height,
+                TileSize = _map.TileSize,
+                Tiles = _map.Snapshot(),
+            },
+            Players = playerDiagnostics,
+            Bombs = _bombs.ToArray(),
+            Explosions = _explosions.ToArray(),
+            Powerups = _powerups.ToArray(),
+            Stats = new ServerStats
+            {
+                Updates = _latestStats.Updates,
+                ProcessedInputs = _latestStats.ProcessedInputs,
+                DroppedInputs = _latestStats.DroppedInputs,
+                TickOverruns = _latestStats.TickOverruns,
+                MaxTickDeltaMs = _latestStats.MaxTickDeltaMs,
+                QueueDepth = _latestStats.QueueDepth,
+                MaxQueueDepth = _latestStats.MaxQueueDepth,
+                ActivePlayers = _latestStats.ActivePlayers,
+                AvailablePlayerSlots = _latestStats.AvailablePlayerSlots,
+            },
+        };
+    }
 
     public bool TryAddPlayer(string playerId, out Player player)
     {
@@ -637,7 +709,7 @@ public class GameState
         }
     }
 
-    class ServerStats
+    public class ServerStats
     {
         public int Updates { get; set; }
         public int ProcessedInputs { get; set; }

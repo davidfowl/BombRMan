@@ -1,4 +1,4 @@
-(function ($, window) {
+(function (window) {
     var DELTA = 10,
         POWER = 100;
 
@@ -316,4 +316,4 @@
         }
     };
 
-})(jQuery, window);
+})(window);

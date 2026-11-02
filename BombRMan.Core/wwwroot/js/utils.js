@@ -1,4 +1,4 @@
-(function($, window) {
+(function (window) {
 
 window.Game.Utils = {
     indexOf: function(arr, value) {
@@ -29,13 +29,19 @@ window.Game.Utils = {
 window.Game.Logger = {
     log : function(value) {
         if(window.Game.Debugging) {
-            $('#debug').append(value);
-            $('#debug').append('<br/>');
+            var debugEl = document.getElementById('debug');
+            if (debugEl) {
+                debugEl.appendChild(document.createTextNode(value));
+                debugEl.appendChild(document.createElement('br'));
+            }
         }
     },
     clear: function() {
-        $('#debug').empty();
+        var debugEl = document.getElementById('debug');
+        if (debugEl) {
+            debugEl.textContent = '';
+        }
     }
 };
 
-})(jQuery, window);
+})(window);

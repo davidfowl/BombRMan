@@ -12,6 +12,9 @@ whatever is already in progress.
 See [`ARCHITECTURE.md`](ARCHITECTURE.md) for a full breakdown of the tech
 stack, project layout, networking/game-loop design, and known gaps.
 
+See [`DEPLOYMENT.md`](DEPLOYMENT.md) for running the game in a Docker
+container.
+
 ## Requirements
 
 - .NET SDK matching [`global.json`](global.json) (10.0.301; `rollForward:
@@ -61,6 +64,14 @@ and `watch` tasks.
 dotnet test BombRMan.slnx
 ```
 
+Pure client-side logic (`wwwroot/js`) has framework-free Node tests under
+`client-tests/` (no jQuery/browser required):
+
+```bash
+cd client-tests
+npm test
+```
+
 ## Controls
 
 Arrow keys to move, and the bomb-placement key defined in
@@ -78,4 +89,6 @@ roadmap tracking issue.
 ## Contributing
 
 Issues and PRs welcome. Please make sure `dotnet build BombRMan.slnx` and
-`dotnet test BombRMan.slnx` pass before opening a PR.
+`dotnet test BombRMan.slnx` pass before opening a PR. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for setup, coding, and testing
+guidelines.

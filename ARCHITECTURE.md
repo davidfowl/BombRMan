@@ -10,12 +10,12 @@ runtime architecture, how to run the project locally, and known gaps.
 | Orchestration | .NET Aspire AppHost (`BombRMan.AppHost`), `Aspire.ServiceDefaults` (OpenTelemetry, health checks, service discovery) |
 | Server | ASP.NET Core (`net10.0`, `Microsoft.NET.Sdk.Web`) |
 | Realtime transport | ASP.NET Core SignalR (`/game` hub) |
-| Client | Static HTML/CSS/vanilla JS + jQuery/jQuery UI 1.8, `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
-| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 51 tests covering game rules, networking glue, and diagnostics |
+| Client | Static HTML/CSS/vanilla JS (no framework dependency), `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
+| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 65 tests covering game rules, networking glue, and diagnostics |
 | Solution | `BombRMan.slnx` (new-style `.slnx` solution file), SDK pinned via `global.json` (10.0.301) |
 
-There is currently **no CI workflow** and **no Dockerfile** — see "Known gaps"
-below.
+All of CI, containerization, diagnostics, and the Aspire AppHost itself are now
+in place — see "Known gaps" below for what's left.
 
 ## Project layout
 
@@ -77,6 +77,18 @@ context.
 Wire format: SignalR's JSON protocol with a custom `KeyboardStateConverter` that
 packs the 8 input keys into/from a compact bitfield to keep input messages
 small.
+
+### Diagnostics: `GET /diagnostics`
+
+A minimal-API endpoint (wired up in `Program.cs`) that returns a live JSON
+snapshot of the single shared `GameState` instance: round state, every active
+player's position/direction/stats, in-flight bombs/explosions/powerups, the
+current (possibly brick-destroyed) map tile layout, and the same per-second
+server counters broadcast over SignalR as `serverStats` (updates/sec,
+inputs/sec, dropped inputs, tick overruns, queue depth). Built by
+`GameState.GetDiagnosticsSnapshot()`; intended for debugging/observability, not
+for driving gameplay. See `DiagnosticsEndpointTests` for an end-to-end example
+(hits the endpoint over HTTP while a real round is in progress).
 
 ### Client-side prediction
 
@@ -170,18 +182,25 @@ multiple server processes.
 These are the gaps between what exists today and a fully polished, easily
 runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
-1. **No CI.** No `.github/workflows`, so builds/tests aren't verified
-   automatically on PRs.
-2. **No containerization.** No `Dockerfile`, so there's no reproducible
-   deployment artifact.
-3. **No live diagnostics endpoint.** `GameState` tracks internal counters
-   (updates/sec, inputs/sec, dropped inputs, tick overruns — see
-   `GameStateDiagnosticsTests`) but nothing surfaces them over HTTP yet.
-4. **Client is a 2012-era jQuery UI static page.** Functional, but a strong
-   candidate for a minimal modern rewrite (vanilla JS/Canvas) that preserves
-   the existing SignalR contract.
-5. **No baseline CONTRIBUTING docs** prior to this change.
-6. **Single-process, single-game-state multiplayer.** Everyone who connects to
+1. ~~**No Aspire AppHost.**~~ Resolved: `BombRMan.AppHost` orchestrates the
+   `bombrman-server` resource for local dev/debugging (see "Running it
+   locally" above).
+2. ~~**No CI.**~~ Resolved: `.github/workflows` builds and runs the test suite
+   on every PR.
+3. ~~**No containerization.**~~ Resolved: a multi-stage `Dockerfile` (plus
+   `DEPLOYMENT.md`) produces a reproducible deployment artifact.
+4. ~~**No live diagnostics endpoint.**~~ Resolved: `GET /diagnostics` returns a
+   live JSON snapshot of round state, players, bombs, explosions, powerups,
+   map tiles, and the per-second server stats counters (updates/sec,
+   inputs/sec, dropped inputs, tick overruns — see `GameStateDiagnosticsTests`
+   and `DiagnosticsEndpointTests`).
+5. ~~**Client is a 2012-era jQuery UI static page.**~~ Resolved: the client is
+   now plain vanilla JS/Canvas (no framework dependency as of M3), though it's
+   still a single hand-rolled `index.htm` with no build step, bundler, or
+   component model.
+6. ~~**No baseline README/CONTRIBUTING docs.**~~ Resolved: `README.md` and
+   `CONTRIBUTING.md` are now on `main`.
+7. **Single-process, single-game-state multiplayer.** Everyone who connects to
    the one running server shares a single `GameState` instance/round — there's
    no matchmaking, multiple concurrent rooms, or horizontal scale-out (would
    need a SignalR backplane if that's ever a goal). The AppHost currently
@@ -191,7 +210,8 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
 ## Testing
 
-`BombRMan.Core.Tests` (51 tests, all passing as of this writing) covers:
+`BombRMan.Core.Tests` (65 tests, all passing as of this writing) covers:
 `BombLogicTests`, `MapTests`, `PlayerTests`, `PlayerInputBufferTests`,
 `KeyboardStateConverterTests`, `GameServerIntegrationTests` (hub-level
-integration tests), and `GameStateDiagnosticsTests`.
+integration tests), `GameStateDiagnosticsTests`, and `DiagnosticsEndpointTests`
+(the `/diagnostics` HTTP endpoint).

@@ -1,4 +1,4 @@
-(function ($, window) {
+(function (window) {
     var SCALE_FACTOR = 1.5,
         BASE_TILE_SIZE = 24;
 
@@ -124,4 +124,4 @@
         }
     };
 
-})(jQuery, window);
+})(window);

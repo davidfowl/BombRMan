@@ -108,6 +108,54 @@ public static class BombLogic
     }
 
     /// <summary>
+    /// Returns every still-alive player standing on any current explosion tile. Players on
+    /// different explosion tiles (e.g. two bombs going off at once) are all returned together so
+    /// simultaneous eliminations within the same tick are resolved as a single, consistent batch
+    /// rather than depending on iteration order.
+    /// </summary>
+    public static List<Player> GetEliminatedPlayers(IReadOnlyList<Player> players, IReadOnlyList<Explosion> explosions)
+    {
+        var eliminated = new List<Player>();
+
+        if (explosions.Count == 0)
+        {
+            return eliminated;
+        }
+
+        foreach (var player in players)
+        {
+            if (player.IsAlive && IsHitByExplosion(player, explosions))
+            {
+                eliminated.Add(player);
+            }
+        }
+
+        return eliminated;
+    }
+
+    /// <summary>
+    /// Resolves which single player collects <paramref name="powerup"/> when multiple players can
+    /// occupy the same tile on the same tick (a "powerup collection race"). The first alive player
+    /// in <paramref name="players"/> standing on the powerup's tile wins; this mirrors the
+    /// first-come ordering used elsewhere in the engine (e.g. input processing order) and
+    /// guarantees exactly one collector even if several players raced to the same tile.
+    /// </summary>
+    public static bool TryCollectPowerup(IReadOnlyList<Player> players, Powerup powerup, out Player collector)
+    {
+        foreach (var player in players)
+        {
+            if (player.IsAlive && player.X == powerup.X && player.Y == powerup.Y)
+            {
+                collector = player;
+                return true;
+            }
+        }
+
+        collector = null;
+        return false;
+    }
+
+    /// <summary>
     /// Returns the sole surviving player if the round is over (one or zero players alive
     /// among <paramref name="activePlayers"/>), otherwise null. A null return with an empty
     /// or all-dead roster is a draw; callers should treat "no candidate" and "roster count &lt;= 1

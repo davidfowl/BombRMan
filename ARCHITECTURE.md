@@ -10,7 +10,7 @@ runtime architecture, how to run the project locally, and known gaps.
 | Server | ASP.NET Core (`net10.0`, `Microsoft.NET.Sdk.Web`) |
 | Realtime transport | ASP.NET Core SignalR (`/game` hub) |
 | Client | Static HTML/CSS/vanilla JS (no framework dependency), `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
-| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 51 tests covering game rules, networking glue, and diagnostics |
+| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 65 tests covering game rules, networking glue, and diagnostics |
 | Solution | `BombRMan.slnx` (new-style `.slnx` solution file), SDK pinned via `global.json` (10.0.301) |
 
 There is currently **no .NET Aspire AppHost**, **no CI workflow**, **no Dockerfile**,
@@ -72,6 +72,18 @@ context.
 Wire format: SignalR's JSON protocol with a custom `KeyboardStateConverter` that
 packs the 8 input keys into/from a compact bitfield to keep input messages
 small.
+
+### Diagnostics: `GET /diagnostics`
+
+A minimal-API endpoint (wired up in `Program.cs`) that returns a live JSON
+snapshot of the single shared `GameState` instance: round state, every active
+player's position/direction/stats, in-flight bombs/explosions/powerups, the
+current (possibly brick-destroyed) map tile layout, and the same per-second
+server counters broadcast over SignalR as `serverStats` (updates/sec,
+inputs/sec, dropped inputs, tick overruns, queue depth). Built by
+`GameState.GetDiagnosticsSnapshot()`; intended for debugging/observability, not
+for driving gameplay. See `DiagnosticsEndpointTests` for an end-to-end example
+(hits the endpoint over HTTP while a real round is in progress).
 
 ### Client-side prediction
 
@@ -147,12 +159,15 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
    automatically on PRs.
 3. **No containerization.** No `Dockerfile`, so there's no reproducible
    deployment artifact.
-4. **No live diagnostics endpoint.** `GameState` tracks internal counters
-   (updates/sec, inputs/sec, dropped inputs, tick overruns — see
-   `GameStateDiagnosticsTests`) but nothing surfaces them over HTTP yet.
-5. **Client is a static page.** It's plain vanilla JS/Canvas (no framework
-   dependency as of M3) but still a single hand-rolled `index.htm` with no
-   build step, bundler, or component model.
+4. ~~**No live diagnostics endpoint.**~~ Resolved: `GET /diagnostics` returns a
+   live JSON snapshot of round state, players, bombs, explosions, powerups,
+   map tiles, and the per-second server stats counters (updates/sec,
+   inputs/sec, dropped inputs, tick overruns — see `GameStateDiagnosticsTests`
+   and `DiagnosticsEndpointTests`).
+5. ~~**Client is a 2012-era jQuery UI static page.**~~ Resolved: the client is
+   now plain vanilla JS/Canvas (no framework dependency as of M3), though it's
+   still a single hand-rolled `index.htm` with no build step, bundler, or
+   component model.
 6. **No baseline README/CONTRIBUTING docs** prior to this change.
 7. **Single-process, single-game-state multiplayer.** Everyone who connects to
    the one running server shares a single `GameState` instance/round — there's
@@ -161,7 +176,8 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
 ## Testing
 
-`BombRMan.Core.Tests` (51 tests, all passing as of this writing) covers:
+`BombRMan.Core.Tests` (65 tests, all passing as of this writing) covers:
 `BombLogicTests`, `MapTests`, `PlayerTests`, `PlayerInputBufferTests`,
 `KeyboardStateConverterTests`, `GameServerIntegrationTests` (hub-level
-integration tests), and `GameStateDiagnosticsTests`.
+integration tests), `GameStateDiagnosticsTests`, and `DiagnosticsEndpointTests`
+(the `/diagnostics` HTTP endpoint).

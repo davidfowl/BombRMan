@@ -41,6 +41,14 @@ and `watch` tasks.
 dotnet test BombRMan.slnx
 ```
 
+Pure client-side logic (`wwwroot/js`) has framework-free Node tests under
+`client-tests/` (no jQuery/browser required):
+
+```bash
+cd client-tests
+npm test
+```
+
 ## Controls
 
 Arrow keys to move, and the bomb-placement key defined in

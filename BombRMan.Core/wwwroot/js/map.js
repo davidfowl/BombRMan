@@ -1,4 +1,4 @@
-(function($, window) {
+(function (window) {
     var map = [];
 
     window.Game.Map = function(width, height, tileSize) {
@@ -32,4 +32,4 @@
         }
     };
 
-})(jQuery, window);
+})(window);

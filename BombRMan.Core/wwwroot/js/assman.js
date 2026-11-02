@@ -1,4 +1,4 @@
-(function($, window) {
+(function (window) {
 
     window.Game.AssetManager = function() {
         var bomberImg = new Image();
@@ -24,4 +24,4 @@
         }
     };
 
-})(jQuery, window);
+})(window);

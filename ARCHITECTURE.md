@@ -9,8 +9,8 @@ runtime architecture, how to run the project locally, and known gaps.
 |---|---|
 | Server | ASP.NET Core (`net10.0`, `Microsoft.NET.Sdk.Web`) |
 | Realtime transport | ASP.NET Core SignalR (`/game` hub) |
-| Client | Static HTML/CSS/vanilla JS + jQuery/jQuery UI 1.8, `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
-| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 53 tests covering game rules, networking glue, and diagnostics |
+| Client | Static HTML/CSS/vanilla JS (no framework dependency), `<canvas>` renderer, SignalR JS client (fetched via `libman.json`) |
+| Tests | xUnit-style test project (`BombRMan.Core.Tests`), 65 tests covering game rules, networking glue, and diagnostics |
 | Solution | `BombRMan.slnx` (new-style `.slnx` solution file), SDK pinned via `global.json` (10.0.301) |
 
 There is currently **no .NET Aspire AppHost**, **no CI workflow**, **no Dockerfile**,
@@ -164,9 +164,10 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
    map tiles, and the per-second server stats counters (updates/sec,
    inputs/sec, dropped inputs, tick overruns — see `GameStateDiagnosticsTests`
    and `DiagnosticsEndpointTests`).
-5. **Client is a 2012-era jQuery UI static page.** Functional, but a strong
-   candidate for a minimal modern rewrite (vanilla JS/Canvas) that preserves
-   the existing SignalR contract.
+5. ~~**Client is a 2012-era jQuery UI static page.**~~ Resolved: the client is
+   now plain vanilla JS/Canvas (no framework dependency as of M3), though it's
+   still a single hand-rolled `index.htm` with no build step, bundler, or
+   component model.
 6. **No baseline README/CONTRIBUTING docs** prior to this change.
 7. **Single-process, single-game-state multiplayer.** Everyone who connects to
    the one running server shares a single `GameState` instance/round — there's
@@ -175,7 +176,7 @@ runnable project (tracked as GitHub issues — see the roadmap tracking issue):
 
 ## Testing
 
-`BombRMan.Core.Tests` (53 tests, all passing as of this writing) covers:
+`BombRMan.Core.Tests` (65 tests, all passing as of this writing) covers:
 `BombLogicTests`, `MapTests`, `PlayerTests`, `PlayerInputBufferTests`,
 `KeyboardStateConverterTests`, `GameServerIntegrationTests` (hub-level
 integration tests), `GameStateDiagnosticsTests`, and `DiagnosticsEndpointTests`

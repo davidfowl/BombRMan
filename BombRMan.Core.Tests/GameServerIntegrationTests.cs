@@ -164,8 +164,8 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         await first.StartAsync();
         await second.StartAsync();
         await Task.WhenAll(
-            firstInitialized.Task.WaitAsync(TimeSpan.FromSeconds(5)),
-            secondInitialized.Task.WaitAsync(TimeSpan.FromSeconds(5)));
+            firstInitialized.Task.WaitAsync(TimeSpan.FromSeconds(20)),
+            secondInitialized.Task.WaitAsync(TimeSpan.FromSeconds(20)));
 
         var firstPlayer = await firstInitialized.Task;
         var secondPlayer = await secondInitialized.Task;
@@ -174,6 +174,7 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         var driverIndex = initial.Index;
         var targetX = initial.X == 1 ? 2 : 10;
         var horizontalKey = initial.X == 1 ? Keys.RIGHT : Keys.LEFT;
+        var gameState = factory.Services.GetRequiredService<GameState>();
         var inputId = 0;
         inputId = await SendInputLoopAsync(driver, inputId, Keys.DOWN, 4);
         if (initial.X != 1)
@@ -182,21 +183,37 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         }
         inputId = await SendInputLoopAsync(driver, inputId, null, 2);
         inputId = await SendInputLoopAsync(driver, inputId, Keys.A, 2);
+
+        // The server only retains the single most-recently received input per player
+        // (see PlayerInputBuffer), so if the next movement input is sent before the game
+        // loop has actually consumed the bomb-key input, the edge-triggered bomb placement
+        // can be silently coalesced away and lost - most likely to happen when the game
+        // loop thread is starved under heavy system load (e.g. a full parallel test run).
+        // Poll for the server-authoritative bomb to actually exist before moving the driver
+        // away, instead of assuming a fixed number of wall-clock-paced sends was enough.
+        await WaitForConditionAsync(
+            () => gameState.Bombs.Any(bomb => bomb.OwnerIndex == driverIndex),
+            TimeSpan.FromSeconds(20));
+
         inputId = await SendInputLoopAsync(driver, inputId, Keys.DOWN, 20);
         inputId = await SendInputLoopAsync(driver, inputId, null, 2);
 
         var powerup = await WaitForQueueAsync(
             spawned,
-            value => value.X == targetX && value.Y == 3);
+            value => value.X == targetX && value.Y == 3,
+            TimeSpan.FromSeconds(20));
         var secondPowerup = await WaitForQueueAsync(
             spawned,
-            value => value.X == powerup.X && value.Y == powerup.Y && value.Type == powerup.Type);
+            value => value.X == powerup.X && value.Y == powerup.Y && value.Type == powerup.Type,
+            TimeSpan.FromSeconds(20));
         var firstTileChange = await WaitForQueueAsync(
             tileChanges,
-            value => value.X == targetX && value.Y == 3 && value.Tile == Tile.GRASS);
+            value => value.X == targetX && value.Y == 3 && value.Tile == Tile.GRASS,
+            TimeSpan.FromSeconds(20));
         var secondTileChange = await WaitForQueueAsync(
             tileChanges,
-            value => value.X == targetX && value.Y == 3 && value.Tile == Tile.GRASS);
+            value => value.X == targetX && value.Y == 3 && value.Tile == Tile.GRASS,
+            TimeSpan.FromSeconds(20));
         Assert.Equal(powerup.Type, secondPowerup.Type);
         Assert.Equal(Tile.GRASS, firstTileChange.Tile);
         Assert.Equal(Tile.GRASS, secondTileChange.Tile);
@@ -204,13 +221,27 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         inputId = await SendInputLoopAsync(driver, inputId, Keys.UP, 13);
         inputId = await SendInputLoopAsync(driver, inputId, horizontalKey, 3);
         inputId = await SendInputLoopAsync(driver, inputId, null, 3);
-        var gameState = factory.Services.GetRequiredService<GameState>();
         Player driverState;
-        for (var attempt = 0; attempt < 10; attempt++)
+
+        // Nudge the driver onto the powerup's tile one correction at a time. Under heavy
+        // system load (e.g. the full suite running in parallel) wall-clock delays can stretch
+        // well beyond their nominal duration, so how far a single correction input moves the
+        // player is not predictable from elapsed real time alone. Rather than bounding this by
+        // a fixed number of attempts (which assumes each attempt advances the player a roughly
+        // known distance within a roughly known time), poll against a generous wall-clock
+        // deadline and keep correcting until the server-authoritative position actually matches,
+        // so the test converges regardless of how much real time each step actually took.
+        var correctionDeadline = DateTime.UtcNow + TimeSpan.FromSeconds(30);
+        while (true)
         {
-            await Task.Delay(100);
+            await Task.Delay(50);
             driverState = gameState.ActivePlayers.Single(player => player.Index == driverIndex);
             if (driverState.X == powerup.X && driverState.Y == powerup.Y)
+            {
+                break;
+            }
+
+            if (DateTime.UtcNow >= correctionDeadline)
             {
                 break;
             }
@@ -228,13 +259,15 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
 
         var collection = await WaitForQueueAsync(
             collected,
-            value => value.X == powerup.X && value.Y == powerup.Y);
+            value => value.X == powerup.X && value.Y == powerup.Y,
+            TimeSpan.FromSeconds(20));
         var secondCollection = await WaitForQueueAsync(
             collected,
             value => value.X == collection.X &&
                 value.Y == collection.Y &&
                 value.PlayerIndex == collection.PlayerIndex &&
-                value.Type == collection.Type);
+                value.Type == collection.Type,
+            TimeSpan.FromSeconds(20));
 
         Assert.Equal(collection.PlayerIndex, secondCollection.PlayerIndex);
         Assert.Equal(powerup.Type, collection.Type);
@@ -245,7 +278,8 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
             updates,
             value => value.Index == collection.PlayerIndex &&
                 value.Speed == 2 &&
-                value.LastProcessed > 0);
+                value.LastProcessed > 0,
+            TimeSpan.FromSeconds(20));
 
         Assert.Equal(2, collectorUpdate.Speed);
         var collector = gameState.ActivePlayers.Single(player => player.Index == collection.PlayerIndex);
@@ -258,7 +292,8 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         var moved = await WaitForQueueAsync(
             updates,
             value => value.Index == collection.PlayerIndex &&
-                (value.X != powerup.X || value.Y != powerup.Y));
+                (value.X != powerup.X || value.Y != powerup.Y),
+            TimeSpan.FromSeconds(20));
         Assert.True(moved.X != powerup.X || moved.Y != powerup.Y);
     }
 
@@ -305,6 +340,28 @@ public class GameServerIntegrationTests : IClassFixture<WebApplicationFactory<Pr
         }
 
         return new KeyboardState(keyState, id, 0);
+    }
+
+    /// <summary>
+    /// Polls server-authoritative state until <paramref name="condition"/> is true, backing off
+    /// slightly between checks. Used instead of a fixed wall-clock delay so the test converges
+    /// based on actual observed state rather than an assumed elapsed-time budget.
+    /// </summary>
+    private static async Task WaitForConditionAsync(Func<bool> condition, TimeSpan timeout)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+        var delay = TimeSpan.FromMilliseconds(25);
+
+        while (!condition())
+        {
+            if (DateTime.UtcNow >= deadline)
+            {
+                throw new TimeoutException("The expected server-side condition was not observed.");
+            }
+
+            await Task.Delay(delay);
+            delay = TimeSpan.FromMilliseconds(Math.Min(delay.TotalMilliseconds * 2, 250));
+        }
     }
 
     private static async Task<T> WaitForQueueAsync<T>(
